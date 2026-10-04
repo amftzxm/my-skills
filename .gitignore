@@ -1,1 +1,7 @@
-# nothing to ignore yet
+server.log
+server.pid
+__pycache__/
+*.pyc
+.DS_Store
+slip*.html
+*slip*.html
