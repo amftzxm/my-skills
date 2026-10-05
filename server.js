@@ -580,25 +580,26 @@ const HELD_CSS = `
   .note { background:#16211a; border:1px solid #2b7a44; color:#8fd6a6;
     border-radius:8px; padding:9px 12px; font-size:12px; line-height:1.45;
     margin:12px 0; }
-  .card { display:grid; grid-template-columns:58px 70px 1fr; gap:10px;
+  .card { display:grid; grid-template-columns:60px 78px 1fr; gap:10px;
     align-items:center; background:#171a21; border:1px solid #242833;
     border-radius:12px; padding:12px 14px; margin-bottom:10px; transition:border-color .15s; }
   .card.hot { border-color:#5a4416; background:#1c1a13; }
   .l { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
   .l .min { color:#f0b429; font-size:11px; font-weight:600;
     font-variant-numeric:tabular-nums; }
-  .l .score { font-weight:800; font-size:20px; color:#fff;
+  .l .score { font-weight:800; font-size:22px; color:#fff;
     font-variant-numeric:tabular-nums; line-height:1.1; }
   .mid { display:flex; flex-direction:column; align-items:center; gap:4px;
     border-left:1px solid #242833; border-right:1px solid #242833; padding:0 8px; }
-  .held b { font-size:17px; color:#4ade80; font-weight:800;
+  .held b { font-size:18px; color:#4ade80; font-weight:800;
     font-variant-numeric:tabular-nums; }
   .card.hot .held b { color:#f0b429; }
   .held i { font-style:normal; font-size:10px; color:#6b7280; }
   .since { font-size:10.5px; color:#6b7280; }
   .r { min-width:0; display:flex; flex-direction:column; gap:3px; }
-  .r .teams { font-size:14px; color:#e2e8f0; font-weight:500; overflow:hidden;
-    text-overflow:ellipsis; white-space:nowrap; }
+  .r .teams { font-size:13.5px; color:#e2e8f0; font-weight:500;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; line-height:1.25; }
   .r .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
   .r .league { font-size:11px; color:#64748b; white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; }
