@@ -796,6 +796,77 @@ ${now}</footer>
 </html>`;
 }
 
+function renderAll(matches, now) {
+  // All live matches, held-style cards, sorted by minute played.
+  const list = matches
+    .sort((a, b) => {
+      if (a.minute === null) return 1;
+      if (b.minute === null) return -1;
+      return b.minute - a.minute;
+    })
+    .filter((m) => m.p);
+
+  if (list.length === 0) return renderEmpty(now);
+
+  const chips = [];
+  for (let h = 10; h <= 60; h += 10) chips.push(h);
+  var min = chips[0];
+  try { min = Number(localStorage.getItem('allMin')) || chips[0]; } catch(e) {}
+  const chipsHtml = chips
+    .map((h) => {
+      const on = h === min;
+      return `<div class="chip${on ? ' on' : ''}" data-min="${h}">` +
+        `<b>&ge;</b> ${h}'`; // "shown at least this long"
+    })
+    .join('');
+
+  const body = list
+    .map((m, idx) => {
+      const p = m.p;
+      const since = m.lastGoal === null ? 'kickoff' : m.lastGoal + "'";
+      const hot = m.held !== null && m.held >= 30 ? ' hot' : '';
+      let goalsInline = '';
+      if (m.goals && m.goals.length > 0) {
+        const parts = m.goals.map((g, i) => {
+          const prev = i > 0 ? m.goals[i - 1] : 0;
+          const gap = g - prev;
+          const gapLabel = i === 0 ? 'kickoff' : gap + 'm';
+          return `<span class="mg">${g}'<i>${gapLabel}</i></span>`;
+        }).join('');
+        goalsInline = `<div class="goalrow"><div class="goalrow-connector"></div>` +
+          `<div class="goalrow-inner">${parts}</div></div>`;
+      }
+      return `<div class="card${hot}" data-hold="${m.held ?? ''}">` +
+        `<div class="card-head"><span class="teams">${esc(p[30])} <i>vs</i> ` +
+        `${esc(p[31])}</span><span class="league">${esc(m.league || '—')}</span></div>` +
+        `<div class="card-body"><div class="l"><span class="clock">${esc(statusLabel(p[1]))}</span>` +
+        `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
+        `<div class="mid"><div class="held-pill"><b>${m.held !== null ? m.held : '—'}</b>` +
+        `<i>min held</i><br><span class="since">since ` +
+        `${esc(since)}</span></div></div>` +
+        `<div class="r"></div></div>` +
+        `${goalsInline}</div>`;
+    })
+    .join('');
+
+  return (`<!DOCTYPE html>
+<html lang="en" class="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All live matches &middot; my-skills</title>
+<style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#0f1115;color:#e2e8f0}.top{position:sticky;top:0;z-index:20;background:#0f1115;margin:-12px -12px 0;padding:4px 12px 8px;border-bottom:1px solid #1f232d}.top h1{font-size:17px;margin:0 0 2px}.top .meta{color:#8a8f98;font-size:12px;margin:0 0 10px}.chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:0 0 auto;background:#1b1f28;border:1px solid #2b3040;color:#9aa3b2;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:34px;-webkit-tap-highlight-color:transparent}.chip b{font-weight:700;font-size:11px;color:#6b7280;background:#12151c;border-radius:999px;padding:1px 6px}.chip.on{background:#12341f;border-color:#2b7a44;color:#4ade80}.chip.on b{background:#0d2416;color:#4ade80}.note{background:#16211a;border:1px solid #2b7a44;color:#8fd6a6;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.45;margin:12px 0}.card{display:flex;flex-direction:column;background:#171a21;border:1px solid #242833;border-radius:12px;padding:12px 14px;margin-bottom:10px;transition:border-color .15s}.card.hot{border-color:#5a4416;background:#1c1a13}.card-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #242833}.card-head .teams{font-size:14.5px;color:#e2e8f0;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}.card-head .teams i{font-style:normal;color:#475569;font-size:11px;margin:0 4px}.card-head .league{font-size:11px;color:#64748b}.card-body{display:grid;grid-template-columns:auto 1fr auto auto;gap:14px;align-items:center}.l{display:flex;flex-direction:column;align-items:flex-start;gap:4px}.clock{display:inline-flex;align-items:center;gap:5px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:3px 9px;font-size:12px;font-weight:700;color:#f0b429;font-variant-numeric:tabular-nums;align-self:flex-start}.l .score{font-weight:800;font-size:26px;color:#fff;font-variant-numeric:tabular-nums;line-height:1.05}.mid{display:flex}.held-pill{display:flex;flex-direction:column;align-items:center;background:#0a1f14;border:1px solid #16a34a;border-radius:10px;padding:6px 14px;min-width:74px}.held-pill b{font-size:20px;color:#4ade80;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}.card.hot .held-pill{background:#1c1a13;border-color:#5a4416}.card.hot .held-pill b{color:#f0b429}.held-pill i{font-style:normal;font-size:10px;color:#6b7280}.since{font-size:10.5px;color:#6b7280}.r{display:flex;align-items:center}.hidden{display:none !important}.empty{color:#8a8f98;padding:32px 16px;text-align:center;font-size:14px}.goalrow{max-height:200px;overflow:hidden;transition:max-height .22s ease;margin:6px -2px 0;padding:0 4px;display:flex;gap:0;align-items:stretch}.goalrow-connector{width:2px;flex:0 0 2px;background:#242833;border-radius:2px;margin:4px 6px 0 0;align-self:stretch}.goalrow-inner{display:flex;flex-wrap:nowrap;align-items:center;padding:6px 0 2px}.mg{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:46px;padding:4px 8px;background:#0f172a;border:1px solid #334155;border-radius:8px;font-size:13px;font-weight:700;color:#fbbf24;font-variant-numeric:tabular-nums;position:relative;line-height:1.1}.mg i{font-style:normal;font-size:9px;color:#64748b;font-weight:600}.mg + .mg{margin-left:-1px;border-left:2px solid #0f172a}footer{color:#8a8f98;font-size:12px;padding:14px 12px 26px;text-align:center;border-top:1px solid #1f232d;margin-top:0}</style>
+</head><body>
+<div class="top"><h1>All live matches</h1>
+<p class="meta">${now} <span style="float:right">${list.length} live</span></p>
+<div class="chips" id="chips">${chipsHtml}</div>
+</div>
+<div class="note"><b>What the numbers mean:</b> the green pill is how long the current score has been held; "since X’" is the minute of the last goal. The chained badges below show every goal and the minutes between them. Hover/click a badge to see the gap.</div>
+${body}
+<footer>Source: aiscore.mobi &middot; ${now}</footer>
+<script>
+(function(){var KEY='allMin';var chips=document.getElementById('chips');var cards=document.querySelectorAll('.card');function apply(min){var n=0;cards.forEach(function(c){var v=c.dataset.hold;var ok=v===''||Number(v)>=Number(min);c.classList.toggle('hidden',!ok);if(ok)n++;});chips.querySelectorAll('.chip').forEach(function(c){c.classList.toggle('on',c.dataset.min===String(min));});try{localStorage.setItem(KEY,min);}catch(e){}}chips.addEventListener('click',function(e){var c=e.target.closest('.chip');if(c)apply(c.dataset.min);});var s=0;try{s=Number(localStorage.getItem(KEY))||0;}catch(e){}apply(s);})</script>
+</body></html>`);
+}
+
 async function handle(req, res) {
   const path = new URL(req.url, 'http://x').pathname;
 
@@ -804,7 +875,7 @@ async function handle(req, res) {
     return res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
   }
 
-  if (path !== '/' && path !== '/under' && path !== '/held') {
+  if (path !== '/' && path !== '/under' && path !== '/held' && path !== '/all') {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
   }
@@ -854,6 +925,34 @@ async function handle(req, res) {
         return { p, minute, lastGoal, held, goals: goalsList, league: lg };
       });
       html = renderHeld(matches, now);
+    } else if (path === '/all') {
+      // Every live match, same card layout as /held (with goal timelines),
+      // but sorted by minute played rather than held time.
+      const urls = buildUrlMap(page);
+      const live = rows.filter((p) => p[1] !== 'FT' && urls.has(p[0]));
+      const goals = await pool(
+        live, 12, (p) => goalMinutesFor(p[0], urls.get(p[0])));
+
+      const matches = live.map((p, i) => {
+        const raw = toMinute(p[1]);
+        const minute = raw === null ? (p[1] === 'HT' ? 45 : null) : raw;
+        const g = goals[i];
+        let lastGoal = null;
+        let held = null;
+        let goalsList = null;
+        if (minute !== null && Array.isArray(g)) {
+          goalsList = g;
+          if (g.length) {
+            lastGoal = g[g.length - 1];
+            held = Math.max(0, minute - lastGoal);
+          } else {
+            held = minute;
+          }
+        }
+        const lg = leagues.get(matchToLeague.get(p[0]));
+        return { p, minute, lastGoal, held, goals: goalsList, league: lg };
+      });
+      html = renderAll(matches, now);
     } else {
       const { groups, live, matched } = groupByLeague(page, feedRaw);
       html = renderPage(groups, live, matched, now);
