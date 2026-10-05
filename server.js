@@ -616,10 +616,13 @@ const HELD_CSS = `
   #status { text-align:center; color:#6b7280; font-size:12px; margin-top:8px; }
   /* Goal expand row - sits below the card grid, clean flex row */
   .goalrow { max-height:200px; overflow:hidden;
-    transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
+    transition:max-height .22s ease; margin:6px -2px 0; padding:0 4px;
+    display:flex; gap:0; align-items:flex-start; }
   .goalrow.show { max-height:200px; }
+  .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
+    border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    padding:8px 0 2px; border-top:1px solid #242833; }
+    padding:6px 0 2px; border-top:1px solid #242833; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
   .mg { display:inline-flex; align-items:center; justify-content:center;
     min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
@@ -666,7 +669,8 @@ function renderHeld(matches, now) {
       // Goal badges always visible inline, no button needed.
       let goalsInline = '';
       if (m.goals && m.goals.length > 0) {
-        goalsInline = `<div class="goalrow"><div class="goalrow-inner">` +
+        goalsInline = `<div class="goalrow"><div class="goalrow-connector"></div>` +
+          `<div class="goalrow-inner">` +
           m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') +
           `</div></div>`;
       }
@@ -758,10 +762,13 @@ ${now}</footer>
 </script>
 <style>
   .goalrow { max-height:200px; overflow:hidden;
-    transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
+    transition:max-height .22s ease; margin:6px -2px 0; padding:0 4px;
+    display:flex; gap:0; align-items:flex-start; }
   .goalrow.show { max-height:200px; }
+  .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
+    border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    padding:8px 0 2px; border-top:1px solid #242833; }
+    padding:6px 0 2px; border-top:1px solid #242833; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
   .mg { display:inline-flex; align-items:center; justify-content:center;
     min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
