@@ -591,18 +591,22 @@ const HELD_CSS = `
     -webkit-box-orient:vertical; line-height:1.3; }
   .card-head .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
   .card-head .league { font-size:11px; color:#64748b; }
-  .card-body { display:grid; grid-template-columns:58px 1fr auto; gap:12px;
+  .card-body { display:grid; grid-template-columns:1fr auto auto; gap:14px;
     align-items:center; }
   .l { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
   .l .min { color:#f0b429; font-size:11px; font-weight:600;
     font-variant-numeric:tabular-nums; }
-  .l .score { font-weight:800; font-size:24px; color:#fff;
-    font-variant-numeric:tabular-nums; line-height:1.1; }
-  .mid { display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .held b { font-size:17px; color:#4ade80; font-weight:800;
-    font-variant-numeric:tabular-nums; }
-  .card.hot .held b { color:#f0b429; }
-  .held i { font-style:normal; font-size:10px; color:#6b7280; }
+  .l .score { font-weight:800; font-size:26px; color:#fff;
+    font-variant-numeric:tabular-nums; line-height:1.05; }
+  .mid { display:flex; }
+  .held-pill { display:flex; flex-direction:column; align-items:center;
+    background:#0a1f14; border:1px solid #16a34a; border-radius:10px;
+    padding:6px 14px; min-width:74px; }
+  .held-pill b { font-size:20px; color:#4ade80; font-weight:800;
+    font-variant-numeric:tabular-nums; line-height:1; }
+  .card.hot .held-pill { background:#1c1a13; border-color:#5a4416; }
+  .card.hot .held-pill b { color:#f0b429; }
+  .held-pill i { font-style:normal; font-size:10px; color:#6b7280; }
   .since { font-size:10.5px; color:#6b7280; }
   .r { display:flex; align-items:center; }
   .hidden { display:none !important; }
@@ -677,9 +681,9 @@ function renderHeld(matches, now) {
         `${esc(p[31])}</span><span class="league">${esc(m.league || '—')}</span></div>` +
         `<div class="card-body"><div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
-        `<div class="mid"><span class="held"><b>${m.held}</b>` +
-        `<i>min held</i></span><span class="since">since ` +
-        `${esc(since)}</span></div>` +
+        `<div class="mid"><div class="held-pill"><b>${m.held}</b>` +
+        `<i>min held</i><br><span class="since">since ` +
+        `${esc(since)}</span></div></div>` +
         `<div class="r">${goalToggle}</div></div>` +
         `${goalsInline}</div>`
       );
