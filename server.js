@@ -615,9 +615,9 @@ const HELD_CSS = `
   .empty { color:#8a8f98; padding:32px 16px; text-align:center; font-size:14px; }
   #status { text-align:center; color:#6b7280; font-size:12px; margin-top:8px; }
   /* Goal expand row - sits below the card grid, clean flex row */
-  .goalrow { max-height:0; overflow:hidden;
+  .goalrow { max-height:200px; overflow:hidden;
     transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
-  .goalrow.show { max-height:160px; }
+  .goalrow.show { max-height:200px; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
     padding:8px 0 2px; border-top:1px solid #242833; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
@@ -757,9 +757,9 @@ ${now}</footer>
 })();
 </script>
 <style>
-  .goalrow { max-height:0; overflow:hidden;
+  .goalrow { max-height:200px; overflow:hidden;
     transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
-  .goalrow.show { max-height:160px; }
+  .goalrow.show { max-height:200px; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
     padding:8px 0 2px; border-top:1px solid #242833; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
