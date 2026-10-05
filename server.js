@@ -663,22 +663,14 @@ function renderHeld(matches, now) {
       const p = m.p;
       const since = m.lastGoal === null ? 'kickoff' : m.lastGoal + "'";
       const hot = m.held >= 30 ? ' hot' : '';
-      // Inline summary: "8 goals ▾" toggle. Full timeline expands below.
-      let goalToggle = '';
+      // Goal badges always visible inline, no button needed.
+      let goalsInline = '';
       if (m.goals && m.goals.length > 0) {
-        const n = m.goals.length;
-        goalToggle = `<button class="goalbtn" data-goals="${esc(JSON.stringify(m.goals))}" data-idx="${idx}">` +
-          `${n} goal${n > 1 ? 's' : ''} &#9662;</button>`;
-      } else if (m.goals && m.goals.length === 0) {
-        goalToggle = `<span class="goalmarks">0 goals</span>`;
-      }
-      const goalsInline = (m.goals && m.goals.length)
-        ? `<div class="goalrow"><div class="goalrow-inner">` +
+        goalsInline = `<div class="goalrow"><div class="goalrow-inner">` +
           m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') +
-          `</div></div>`
-        : '';
-      return (
-        `<div class="card${hot}" data-held="${m.held}">` +
+          `</div></div>`;
+      }
+      return `<div class="card${hot}" data-held="${m.held}">` +
         `<div class="card-head"><span class="teams">${esc(p[30])} <i>vs</i> ` +
         `${esc(p[31])}</span><span class="league">${esc(m.league || '—')}</span></div>` +
         `<div class="card-body"><div class="l"><span class="clock">${esc(statusLabel(p[1]))}</span>` +
@@ -686,9 +678,8 @@ function renderHeld(matches, now) {
         `<div class="mid"><div class="held-pill"><b>${m.held}</b>` +
         `<i>min held</i><br><span class="since">since ` +
         `${esc(since)}</span></div></div>` +
-        `<div class="r">${goalToggle}</div></div>` +
-        `${goalsInline}</div>`
-      );
+        `<div class="r"></div></div>` +
+        `${goalsInline}</div>`;
     })
     .join('');
 
