@@ -641,22 +641,27 @@ function renderHeld(matches, now) {
       const p = m.p;
       const since = m.lastGoal === null ? 'kickoff' : m.lastGoal + "'";
       const hot = m.held >= 30 ? ' hot' : '';
-      // Inline summary: "7 goals ▸" button. Full timeline in popup.
-      let goalBtn = '';
+      // Inline summary: "8 goals ▾" toggle. Full timeline expands below.
+      let goalToggle = '';
       if (m.goals && m.goals.length > 0) {
         const n = m.goals.length;
-        goalBtn = `<button class="goalbtn" data-goals="${esc(JSON.stringify(m.goals))}">` +
-          `${n} goal${n > 1 ? 's' : ''} &#9658;</button>`;
+        goalToggle = `<button class="goalbtn" data-goals="${esc(JSON.stringify(m.goals))}" data-idx="${idx}">` +
+          `${n} goal${n > 1 ? 's' : ''} &#9662;</button>`;
       } else if (m.goals && m.goals.length === 0) {
-        goalBtn = `<span class="goalmarks">0 goals</span>`;
+        goalToggle = `<span class="goalmarks">0 goals</span>`;
       }
+      const goalsInline = (m.goals && m.goals.length)
+        ? `<div class="goalrow"><span class="goalsep"></span>` +
+          m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') + `</div>`
+        : '';
       return (
         `<div class="card${hot}" data-held="${m.held}">` +
         `<div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
         `<div class="mid"><span class="held"><b>${m.held}</b>` +
         `<i>min held</i></span><span class="since">since ` +
-        `${esc(since)}</span>${goalBtn}</div>` +
+        `${esc(since)}</span>${goalToggle}</div>` +
+        `${goalsInline}` +
         `<div class="r"><span class="teams">${esc(p[30])} <i>vs</i> ` +
         `${esc(p[31])}</span>` +
         `<span class="league">${esc(m.league || '—')}</span></div></div>`
@@ -725,54 +730,23 @@ ${now}</footer>
   var s = 0;
   try { s = localStorage.getItem(KEY) || 0; } catch (e) {}
   apply(s);
-  // --- Goal timeline popup ---
-  var modal = document.getElementById('modal');
-  var modalScore = document.getElementById('modal-score');
-  var modalTeams = document.getElementById('modal-teams');
-  var modalGoals = document.getElementById('modal-goals');
-  function openModal(score, teams, goals) {
-    modalScore.textContent = score;
-    modalTeams.textContent = teams;
-    modalGoals.innerHTML = goals.map(function (g) {
-      return '<span class="mg">' + g + "'</span>";
-    }).join('');
-    modal.classList.remove('hidden');
-    modal.setAttribute('aria-hidden', 'false');
-  }
-  function closeModal() {
-    modal.classList.add('hidden');
-    modal.setAttribute('aria-hidden', 'true');
-  }
+  // --- Goal timeline toggle (inline expand, no overlay) ---
   document.querySelectorAll('.goalbtn').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var card = btn.closest('.card');
-      var score = card.querySelector('.score').textContent;
-      var teams = card.querySelector('.teams').textContent.trim();
-      var goals = JSON.parse(btn.dataset.goals);
-      openModal(score, teams, goals);
+      var row = btn.closest('.card').querySelector('.goalrow');
+      var open = row.classList.toggle('show');
+      btn.innerHTML = open
+        ? btn.dataset.goals.length + ' goals &#9650;'
+        : btn.dataset.goals.length + ' goals &#9662;';
     });
-  });
-  modal.querySelectorAll('[data-close]').forEach(function (el) {
-    el.addEventListener('click', closeModal);
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
   });
 })();
 </script>
 <style>
-  .modal { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; padding:16px; }
-  .modal.hidden { display:none; }
-  .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(2px); }
-  .modal-card { position:relative; background:#1f2937; border-radius:16px; padding:22px 24px; max-width:340px; width:100%; border:1px solid #374151; box-shadow:0 20px 50px rgba(0,0,0,.5); text-align:center; }
-  .modal-x { position:absolute; top:10px; right:12px; background:none; border:none; color:#9ca3af; font-size:22px; cursor:pointer; line-height:1; }
-  .modal-x:hover { color:#e5e7eb; }
-  .modal-head { display:flex; gap:8px; justify-content:center; align-items:baseline; margin-bottom:6px; flex-wrap:wrap; }
-  .modal-score { font-size:28px; font-weight:800; color:#fff; }
-  .modal-teams { font-size:13px; color:#9ca3af; }
-  .modal-title { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#6b7280; margin-bottom:14px; }
-  .modal-goals { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
-  .mg { background:#0f172a; border:1px solid #374151; border-radius:8px; padding:8px 14px; font-size:18px; font-weight:700; color:#fbbf24; }
+  .goalrow { max-height:0; overflow:hidden; transition:max-height .25s ease; padding:0 4px; }
+  .goalrow.show { max-height:200px; padding:8px 4px 0; }
+  .goalsep { display:inline-block; width:1px; height:18px; background:#374151; margin:0 6px; vertical-align:middle; }
+  .mg { display:inline-block; background:#0f172a; border:1px solid #374151; border-radius:8px; padding:4px 10px; font-size:15px; font-weight:700; color:#fbbf24; }
   .goalbtn { background:#1e293b; border:1px solid #374151; color:#fbbf24; border-radius:8px; padding:2px 8px; font-size:12px; cursor:pointer; }
   .goalbtn:hover { background:#374151; }
 </style>
