@@ -591,11 +591,13 @@ const HELD_CSS = `
     -webkit-box-orient:vertical; line-height:1.3; }
   .card-head .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
   .card-head .league { font-size:11px; color:#64748b; }
-  .card-body { display:grid; grid-template-columns:1fr auto auto; gap:14px;
+  .card-body { display:grid; grid-template-columns:auto 1fr auto auto; gap:14px;
     align-items:center; }
-  .l { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
-  .l .min { color:#f0b429; font-size:11px; font-weight:600;
-    font-variant-numeric:tabular-nums; }
+  .l { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .clock { display:inline-flex; align-items:center; gap:5px;
+    background:#1e293b; border:1px solid #334155; border-radius:8px;
+    padding:3px 9px; font-size:12px; font-weight:700; color:#f0b429;
+    font-variant-numeric:tabular-nums; align-self:flex-start; }
   .l .score { font-weight:800; font-size:26px; color:#fff;
     font-variant-numeric:tabular-nums; line-height:1.05; }
   .mid { display:flex; }
@@ -679,7 +681,7 @@ function renderHeld(matches, now) {
         `<div class="card${hot}" data-held="${m.held}">` +
         `<div class="card-head"><span class="teams">${esc(p[30])} <i>vs</i> ` +
         `${esc(p[31])}</span><span class="league">${esc(m.league || '—')}</span></div>` +
-        `<div class="card-body"><div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
+        `<div class="card-body"><div class="l"><span class="clock">${esc(statusLabel(p[1]))}</span>` +
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
         `<div class="mid"><div class="held-pill"><b>${m.held}</b>` +
         `<i>min held</i><br><span class="since">since ` +
