@@ -580,35 +580,48 @@ const HELD_CSS = `
   .note { background:#16211a; border:1px solid #2b7a44; color:#8fd6a6;
     border-radius:8px; padding:9px 12px; font-size:12px; line-height:1.45;
     margin:12px 0; }
-  .card { display:grid; grid-template-columns:58px 84px 1fr; gap:10px;
+  .card { display:grid; grid-template-columns:58px 70px 1fr; gap:10px;
     align-items:center; background:#171a21; border:1px solid #242833;
-    border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+    border-radius:12px; padding:12px 14px; margin-bottom:10px; transition:border-color .15s; }
   .card.hot { border-color:#5a4416; background:#1c1a13; }
-  .l { display:flex; flex-direction:column; }
-  .l .min { color:#f0b429; font-size:12px;
+  .l { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+  .l .min { color:#f0b429; font-size:11px; font-weight:600;
     font-variant-numeric:tabular-nums; }
-  .l .score { font-weight:700; font-size:16px; color:#fff;
-    font-variant-numeric:tabular-nums; }
-  .mid { display:flex; flex-direction:column; align-items:center;
-    border-left:1px solid #242833; border-right:1px solid #242833; }
-  .held b { font-size:18px; color:#4ade80;
+  .l .score { font-weight:800; font-size:20px; color:#fff;
+    font-variant-numeric:tabular-nums; line-height:1.1; }
+  .mid { display:flex; flex-direction:column; align-items:center; gap:4px;
+    border-left:1px solid #242833; border-right:1px solid #242833; padding:0 8px; }
+  .held b { font-size:17px; color:#4ade80; font-weight:800;
     font-variant-numeric:tabular-nums; }
   .card.hot .held b { color:#f0b429; }
-  .held i { font-style:normal; font-size:10px; color:#6b7280; display:block;
-    margin-top:-2px; }
+  .held i { font-style:normal; font-size:10px; color:#6b7280; }
   .since { font-size:10.5px; color:#6b7280; }
-  .goalmarks { font-size:11.5px; color:#fbbf24; margin-left:8px;
-    background:#1f2937; border-radius:6px; padding:1px 6px; }
-  .goalmarks i { font-style:normal; }
-  .r { min-width:0; display:flex; flex-direction:column; gap:2px; }
-  .r .teams { font-size:13.5px; color:#dfe3e8; overflow:hidden;
-    text-overflow:ellipsis; }
-  .r .teams i { font-style:normal; color:#5b6472; font-size:11px; }
-  .r .league { font-size:11px; color:#6b7280; white-space:nowrap;
+  .r { min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .r .teams { font-size:14px; color:#e2e8f0; font-weight:500; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .r .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
+  .r .league { font-size:11px; color:#64748b; white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; }
   .hidden { display:none !important; }
-  .empty { color:#8a8f98; padding:24px; text-align:center; }
-  #status { text-align:center; color:#6b7280; font-size:12px; margin-top:6px; }
+  .empty { color:#8a8f98; padding:32px 16px; text-align:center; font-size:14px; }
+  #status { text-align:center; color:#6b7280; font-size:12px; margin-top:8px; }
+  /* Goal expand row - sits below the card grid, clean flex row */
+  .goalrow { grid-column:1 / -1; max-height:0; overflow:hidden;
+    transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
+  .goalrow.show { max-height:160px; }
+  .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:8px 0 2px; border-top:1px solid #242833; }
+  .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
+  .mg { display:inline-flex; align-items:center; justify-content:center;
+    min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
+    border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
+    font-variant-numeric:tabular-nums; }
+  .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
+    border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:background .12s, transform .08s; }
+  .goalbtn:hover { background:#334155; }
+  .goalbtn:active { transform:scale(.96); }
+  .goalmarks { font-size:11.5px; color:#64748b; font-style:normal; }
 `;
 
 /**
@@ -651,8 +664,9 @@ function renderHeld(matches, now) {
         goalToggle = `<span class="goalmarks">0 goals</span>`;
       }
       const goalsInline = (m.goals && m.goals.length)
-        ? `<div class="goalrow"><span class="goalsep"></span>` +
-          m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') + `</div>`
+        ? `<div class="goalrow"><div class="goalrow-inner">` +
+          m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') +
+          `</div></div>`
         : '';
       return (
         `<div class="card${hot}" data-held="${m.held}">` +
@@ -660,11 +674,12 @@ function renderHeld(matches, now) {
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
         `<div class="mid"><span class="held"><b>${m.held}</b>` +
         `<i>min held</i></span><span class="since">since ` +
-        `${esc(since)}</span>${goalToggle}</div>` +
-        `${goalsInline}` +
+        `${esc(since)}</span></div>` +
         `<div class="r"><span class="teams">${esc(p[30])} <i>vs</i> ` +
         `${esc(p[31])}</span>` +
-        `<span class="league">${esc(m.league || '—')}</span></div></div>`
+        `<span class="league">${esc(m.league || '—')}</span>` +
+        `${goalToggle}</div>` +
+        `${goalsInline}</div>`
       );
     })
     .join('');
@@ -736,31 +751,30 @@ ${now}</footer>
       var row = btn.closest('.card').querySelector('.goalrow');
       var open = row.classList.toggle('show');
       btn.innerHTML = open
-        ? btn.dataset.goals.length + ' goals &#9650;'
-        : btn.dataset.goals.length + ' goals &#9662;';
+        ? JSON.parse(btn.dataset.goals).length + ' goals &#9650;'
+        : JSON.parse(btn.dataset.goals).length + ' goals &#9662;';
     });
   });
 })();
 </script>
 <style>
-  .goalrow { max-height:0; overflow:hidden; transition:max-height .25s ease; padding:0 4px; }
-  .goalrow.show { max-height:200px; padding:8px 4px 0; }
-  .goalsep { display:inline-block; width:1px; height:18px; background:#374151; margin:0 6px; vertical-align:middle; }
-  .mg { display:inline-block; background:#0f172a; border:1px solid #374151; border-radius:8px; padding:4px 10px; font-size:15px; font-weight:700; color:#fbbf24; }
-  .goalbtn { background:#1e293b; border:1px solid #374151; color:#fbbf24; border-radius:8px; padding:2px 8px; font-size:12px; cursor:pointer; }
-  .goalbtn:hover { background:#374151; }
+  .goalrow { grid-column:1 / -1; max-height:0; overflow:hidden;
+    transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
+  .goalrow.show { max-height:160px; }
+  .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:8px 0 2px; border-top:1px solid #242833; }
+  .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
+  .mg { display:inline-flex; align-items:center; justify-content:center;
+    min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
+    border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
+    font-variant-numeric:tabular-nums; }
+  .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
+    border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:background .12s, transform .08s; }
+  .goalbtn:hover { background:#334155; }
+  .goalbtn:active { transform:scale(.96); }
+  .goalmarks { font-size:11.5px; color:#64748b; font-style:normal; }
 </style>
-<!-- Goal timeline popup -->
-<div id="modal" class="modal hidden" aria-hidden="true">
-  <div class="modal-backdrop" data-close></div>
-  <div class="modal-card">
-    <button class="modal-x" data-close aria-label="close">&times;</button>
-    <div class="modal-head"><span class="modal-score" id="modal-score"></span>
-    <span class="modal-teams" id="modal-teams"></span></div>
-    <div class="modal-title">Goal Timeline</div>
-    <div class="modal-goals" id="modal-goals"></div>
-  </div>
-</div>
 </body>
 </html>`;
 }
