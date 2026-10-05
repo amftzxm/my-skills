@@ -617,7 +617,7 @@ const HELD_CSS = `
   /* Goal expand row - sits below the card grid, clean flex row */
   .goalrow { max-height:200px; overflow:hidden;
     transition:max-height .22s ease; margin:6px -2px 0; padding:0 4px;
-    display:flex; gap:0; align-items:flex-start; }
+    display:flex; gap:0; align-items:stretch; }
   .goalrow.show { max-height:200px; }
   .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
     border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
@@ -763,7 +763,7 @@ ${now}</footer>
 <style>
   .goalrow { max-height:200px; overflow:hidden;
     transition:max-height .22s ease; margin:6px -2px 0; padding:0 4px;
-    display:flex; gap:0; align-items:flex-start; }
+    display:flex; gap:0; align-items:stretch; }
   .goalrow.show { max-height:200px; }
   .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
     border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
