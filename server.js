@@ -621,13 +621,14 @@ const HELD_CSS = `
   .goalrow.show { max-height:200px; }
   .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
     border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
-  .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    padding:6px 0 2px; border-top:1px solid #242833; }
+  .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center;
+    padding:6px 0 2px; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
   .mg { display:inline-flex; align-items:center; justify-content:center;
     min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
     border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
-    font-variant-numeric:tabular-nums; }
+    font-variant-numeric:tabular-nums; position:relative; }
+  .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
   .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
     border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
     cursor:pointer; transition:background .12s, transform .08s; }
@@ -767,13 +768,14 @@ ${now}</footer>
   .goalrow.show { max-height:200px; }
   .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
     border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
-  .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    padding:6px 0 2px; border-top:1px solid #242833; }
+  .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center;
+    padding:6px 0 2px; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
   .mg { display:inline-flex; align-items:center; justify-content:center;
     min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
     border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
-    font-variant-numeric:tabular-nums; }
+    font-variant-numeric:tabular-nums; position:relative; }
+  .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
   .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
     border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
     cursor:pointer; transition:background .12s, transform .08s; }
