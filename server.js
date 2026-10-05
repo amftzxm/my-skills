@@ -597,6 +597,9 @@ const HELD_CSS = `
   .held i { font-style:normal; font-size:10px; color:#6b7280; display:block;
     margin-top:-2px; }
   .since { font-size:10.5px; color:#6b7280; }
+  .goalmarks { font-size:11.5px; color:#fbbf24; margin-left:8px;
+    background:#1f2937; border-radius:6px; padding:1px 6px; }
+  .goalmarks i { font-style:normal; }
   .r { min-width:0; display:flex; flex-direction:column; gap:2px; }
   .r .teams { font-size:13.5px; color:#dfe3e8; overflow:hidden;
     text-overflow:ellipsis; }
@@ -638,13 +641,21 @@ function renderHeld(matches, now) {
       const p = m.p;
       const since = m.lastGoal === null ? 'kickoff' : m.lastGoal + "'";
       const hot = m.held >= 30 ? ' hot' : '';
+      // Full goal timeline, e.g. 2-2 [12', 34', 67', 89']
+      let goalsHtml = '';
+      if (m.goals && m.goals.length) {
+        const marks = m.goals.map((g) => `<i>${g}'</i>`).join('');
+        goalsHtml = `<span class="goalmarks">${marks}</span>`;
+      } else if (m.goals && m.goals.length === 0) {
+        goalsHtml = `<span class="goalmarks">0 goals</span>`;
+      }
       return (
         `<div class="card${hot}" data-held="${m.held}">` +
         `<div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
         `<div class="mid"><span class="held"><b>${m.held}</b>` +
         `<i>min held</i></span><span class="since">since ` +
-        `${esc(since)}</span></div>` +
+        `${esc(since)}</span>${goalsHtml}</div>` +
         `<div class="r"><span class="teams">${esc(p[30])} <i>vs</i> ` +
         `${esc(p[31])}</span>` +
         `<span class="league">${esc(m.league || '—')}</span></div></div>`
@@ -763,7 +774,9 @@ async function handle(req, res) {
         const g = goals[i];
         let lastGoal = null;
         let held = null;
+        let goalsList = null;
         if (minute !== null && Array.isArray(g)) {
+          goalsList = g;
           if (g.length) {
             lastGoal = g[g.length - 1];
             held = Math.max(0, minute - lastGoal);
@@ -772,7 +785,7 @@ async function handle(req, res) {
           }
         }
         const lg = leagues.get(matchToLeague.get(p[0]));
-        return { p, minute, lastGoal, held, league: lg };
+        return { p, minute, lastGoal, held, goals: goalsList, league: lg };
       });
       html = renderHeld(matches, now);
     } else {
