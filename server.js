@@ -580,34 +580,36 @@ const HELD_CSS = `
   .note { background:#16211a; border:1px solid #2b7a44; color:#8fd6a6;
     border-radius:8px; padding:9px 12px; font-size:12px; line-height:1.45;
     margin:12px 0; }
-  .card { display:grid; grid-template-columns:60px 78px 1fr; gap:10px;
-    align-items:center; background:#171a21; border:1px solid #242833;
-    border-radius:12px; padding:12px 14px; margin-bottom:10px; transition:border-color .15s; }
+  .card { display:flex; flex-direction:column; background:#171a21;
+    border:1px solid #242833; border-radius:12px; padding:12px 14px;
+    margin-bottom:10px; transition:border-color .15s; }
   .card.hot { border-color:#5a4416; background:#1c1a13; }
+  .card-head { display:flex; flex-direction:column; gap:2px; margin-bottom:10px;
+    padding-bottom:10px; border-bottom:1px solid #242833; }
+  .card-head .teams { font-size:14.5px; color:#e2e8f0; font-weight:600;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; line-height:1.3; }
+  .card-head .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
+  .card-head .league { font-size:11px; color:#64748b; }
+  .card-body { display:grid; grid-template-columns:58px 1fr auto; gap:12px;
+    align-items:center; }
   .l { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
   .l .min { color:#f0b429; font-size:11px; font-weight:600;
     font-variant-numeric:tabular-nums; }
-  .l .score { font-weight:800; font-size:22px; color:#fff;
+  .l .score { font-weight:800; font-size:24px; color:#fff;
     font-variant-numeric:tabular-nums; line-height:1.1; }
-  .mid { display:flex; flex-direction:column; align-items:center; gap:4px;
-    border-left:1px solid #242833; border-right:1px solid #242833; padding:0 8px; }
-  .held b { font-size:18px; color:#4ade80; font-weight:800;
+  .mid { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .held b { font-size:17px; color:#4ade80; font-weight:800;
     font-variant-numeric:tabular-nums; }
   .card.hot .held b { color:#f0b429; }
   .held i { font-style:normal; font-size:10px; color:#6b7280; }
   .since { font-size:10.5px; color:#6b7280; }
-  .r { min-width:0; display:flex; flex-direction:column; gap:3px; }
-  .r .teams { font-size:13.5px; color:#e2e8f0; font-weight:500;
-    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2;
-    -webkit-box-orient:vertical; line-height:1.25; }
-  .r .teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
-  .r .league { font-size:11px; color:#64748b; white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; }
+  .r { display:flex; align-items:center; }
   .hidden { display:none !important; }
   .empty { color:#8a8f98; padding:32px 16px; text-align:center; font-size:14px; }
   #status { text-align:center; color:#6b7280; font-size:12px; margin-top:8px; }
   /* Goal expand row - sits below the card grid, clean flex row */
-  .goalrow { grid-column:1 / -1; max-height:0; overflow:hidden;
+  .goalrow { max-height:0; overflow:hidden;
     transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
   .goalrow.show { max-height:160px; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
@@ -671,15 +673,14 @@ function renderHeld(matches, now) {
         : '';
       return (
         `<div class="card${hot}" data-held="${m.held}">` +
-        `<div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
+        `<div class="card-head"><span class="teams">${esc(p[30])} <i>vs</i> ` +
+        `${esc(p[31])}</span><span class="league">${esc(m.league || '—')}</span></div>` +
+        `<div class="card-body"><div class="l"><span class="min">${esc(statusLabel(p[1]))}</span>` +
         `<span class="score">${esc(p[2])}-${esc(p[3])}</span></div>` +
         `<div class="mid"><span class="held"><b>${m.held}</b>` +
         `<i>min held</i></span><span class="since">since ` +
         `${esc(since)}</span></div>` +
-        `<div class="r"><span class="teams">${esc(p[30])} <i>vs</i> ` +
-        `${esc(p[31])}</span>` +
-        `<span class="league">${esc(m.league || '—')}</span>` +
-        `${goalToggle}</div>` +
+        `<div class="r">${goalToggle}</div></div>` +
         `${goalsInline}</div>`
       );
     })
@@ -759,7 +760,7 @@ ${now}</footer>
 })();
 </script>
 <style>
-  .goalrow { grid-column:1 / -1; max-height:0; overflow:hidden;
+  .goalrow { max-height:0; overflow:hidden;
     transition:max-height .22s ease; margin:8px -2px 0; padding:0 4px; }
   .goalrow.show { max-height:160px; }
   .goalrow-inner { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
