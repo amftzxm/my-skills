@@ -148,9 +148,9 @@ function renderPage(groups, live, matched, now) {
             else if (ag > hg) away = '<span class="lead">' + away + '</span>';
           }
           return (
-            '<li><span class="' + cls + '">' + esc(label) + '</span>' +
+            '<li class="match-item" data-id="' + esc(p[0]) + '" role="button" aria-label="View details for ' + esc(home) + ' vs ' + esc(away) + '">' +
             '<span class="score">' + esc(p[2]) + '-' + esc(p[3]) + '</span>' +
-            '<span class="teams">' + home + ' vs ' + away + '</span></li>'
+            '<span class="teams">' + home + ' vs ' + away + '</span><span class="chevron">›</span></li>'
           );
         })
         .join('');
@@ -197,16 +197,98 @@ function renderPage(groups, live, matched, now) {
   .teams { color:#cfd3da; }
   .lead { color:#4ade80; }
   .empty { color:#8a8f98; padding:20px; text-align:center; }
+
+  li.match-item { cursor:pointer; position:relative; user-select:none; -webkit-tap-highlight-color:transparent; }
+  li.match-item:active { background:#1f232d; }
+  li.match-item .chevron { position:absolute; right:14px; top:8px; font-size:20px; color:#6b7280; line-height:1; transition:transform .2s; }
+  li.match-item .chevron.rotate { transform:rotate(90deg); }
+  .detail-sheet { position:fixed; inset:0 auto 0 0; background:#0f1115; border-top:1px solid #242833; z-index:100;
+    transform:translateY(100%); transition:transform .28s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column;
+    max-height:85vh; width:100%; box-shadow:0 -6px 24px rgba(0,0,0,.5); }
+  .detail-sheet.open { transform:translateY(0); }
+  .detail-sheet-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #242833; }
+  .detail-sheet-header h2 { font-size:14.5px; margin:0; color:#e2e8f0; }
+  .detail-close { background:#1e293b; border:1px solid #334155; color:#9aa3b2; border-radius:8px; padding:6px 10px;
+    font-size:12.5px; font-weight:600; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .detail-sheet-body { overflow-y:auto; flex:1; padding:14px; }
+  .detail-sheet-body .detail-card { background:#171a21; border:1px solid #242833; border-radius:12px; padding:12px 14px; }
+  .detail-card .d-teams { font-size:14.5px; color:#e2e8f0; font-weight:600; display:block; margin-bottom:4px; }
+  .detail-card .d-teams i { font-style:normal; color:#475569; font-size:11px; margin:0 4px; }
+  .detail-card .d-league { font-size:11px; color:#64748b; }
+  .detail-card .d-body { display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; align-items:center; margin-top:12px; }
+  .detail-card .d-l { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+  .detail-card .d-clock { display:inline-flex; align-items:center; gap:5px; background:#1e293b; border:1px solid #334155;
+    border-radius:8px; padding:3px 9px; font-size:12px; font-weight:700; color:#f0b429; font-variant-numeric:tabular-nums; }
+  .detail-card .d-score { font-weight:800; font-size:26px; color:#fff; font-variant-numeric:tabular-nums; line-height:1.05; }
+  .detail-card .d-mid { display:flex; }
+  .detail-card .d-pill { display:flex; flex-direction:column; align-items:center; background:#0a1f14; border:1px solid #16a34a;
+    border-radius:10px; padding:6px 14px; min-width:74px; }
+  .detail-card .d-pill b { font-size:20px; color:#4ade80; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; }
+  .detail-card .d-pill i { font-style:normal; font-size:10px; color:#6b7280; }
+  .detail-card .d-since { font-size:10.5px; color:#6b7280; }
+  .detail-card .d-note { font-size:11px; color:#9aa3b2; margin-top:8px; line-height:1.4; }
+  .detail-card .d-timeline { margin:10px -2px 0; }
+  .detail-card .d-con { width:2px; flex:0 0 2px; background:#242833; border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
+  .detail-card .d-inner { display:flex; flex-wrap:nowrap; align-items:center; padding:6px 0 2px; }
+  .detail-card .d-mg { display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+    min-width:46px; padding:4px 8px; background:#0f172a; border:1px solid #334155; border-radius:8px;
+    font-size:13px; font-weight:700; color:#fbbf24; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .detail-card .d-mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
+  .detail-card .d-mg + .d-mg { margin-left:-1px; border-left:2px solid #0f172a; }
+  .loading { text-align:center; color:#8a8f98; padding:40px 20px; font-size:13px; }
   footer { color:#6b7280; font-size:12px; margin-top:20px; text-align:center; }
 ${NAV_CSS}
 </style>
 </head>
 <body>
+<div id="detail-sheet" class="detail-sheet"><div class="detail-sheet-header"><h2>Match detail</h2><button id="detail-close" class="detail-close">Close</button></div><div id="detail-body" class="detail-sheet-body"></div></div>
 ${navBar('/')}
 <h1>Live Scores</h1>
 <p class="meta">${live} matches &middot; ${groups.size} leagues &middot; generated ${now} &middot; refreshes every 30s</p>
 ${body}
-<footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}</footer>
+<footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
+(function(){
+  var sheet = document.getElementById('detail-sheet');
+  var close = document.getElementById('detail-close');
+  var body = document.getElementById('detail-body');
+  document.querySelectorAll('.match-item').forEach(function(li){
+    li.addEventListener('click', function(){
+      // rotate this item's chevron
+      var chev = this.querySelector('.chevron');
+      if (chev) chev.classList.toggle('rotate', true);
+      body.innerHTML = '<div class="loading">loading timeline...</div>';
+      sheet.classList.add('open');
+      fetch('/timeline/' + id).then(function(r){ return r.json(); })
+        .then(function(d){ render(d); })
+        .catch(function(){ body.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
+    });
+  });
+  close.addEventListener('click', function(){
+    sheet.classList.remove('open');
+    document.querySelectorAll('.chevron').forEach(function(c){ c.classList.remove('rotate'); });
+  });
+  function render(d){
+    var goals = d.goals || [];
+    var parts = goals.map(function(g, i){
+      var prev = i > 0 ? goals[i-1] : 0;
+      var gap = g - prev;
+      var label = i === 0 ? 'kickoff' : gap + 'm';
+      return '<span class="d-mg">' + g + '′<i>' + label + '</i></span>';
+    }).join('');
+    body.innerHTML =
+      '<div class="detail-card"><span class="d-teams">' + escHtml(d.home) + ' <i>vs</i> ' + escHtml(d.away) + '</span>' +
+      '<span class="d-league">' + d.league + '</span>' +
+      '<div class="d-body"><div class="d-l"><span class="d-clock">' + d.statusLabel + '</span>' +
+      '<span class="d-score">' + d.score + '</span></div>' +
+      '<div class="d-mid"><div class="d-pill"><b>' + (d.held !== null ? d.held + ' held' : 'no hold') + '</b>' +
+      '<i>min held</i><br><span class="d-since">since ' + (d.lastGoal !== null ? d.lastGoal + '′' : 'kickoff') + '</span></div></div>' +
+      '<div class="r"></div></div>' +
+      (goals.length ? '<div class="d-timeline"><div class="d-con"></div><div class="d-inner">' + parts + '</div></div>' : '') +
+      '<p class="d-note">Tap any other match to swap details. Page refreshes every 30s.</p></div>';
+  }
+  function escHtml(s){ return String(s).replace(/[&<>"\]/g, function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;"}[m]; }); }
+})();
+</script></footer>
 </body>
 </html>`;
 }
@@ -875,7 +957,7 @@ async function handle(req, res) {
     return res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
   }
 
-  if (path !== '/' && path !== '/under' && path !== '/held' && path !== '/all') {
+  if (path !== '/' && path !== '/under' && path !== '/held' && path !== '/all' && !path.match(/^\/timeline\//)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
   }
@@ -886,8 +968,44 @@ async function handle(req, res) {
     const feedRaw = await get(FEED, FEED_TTL_MS);
     const page = await get(HOME, HOME_TTL_MS);
     const { leagues, matchToLeague } = buildMaps(page);
+    const urls = buildUrlMap(page);
     const rows = parseFeed(feedRaw);
     const now = localNow();
+
+    if (path.match(/^\/timeline\/(\d+)$/)) {
+      const id = path.match(/^\/timeline\/(\d+)$/)[1];
+      // Fetch homepage + feed fresh so this on-demand endpoint never serves stale data.
+      const pageRaw = await get(HOME, 0);
+      const feedRaw = await get(FEED, 0);
+      const { leagues, matchToLeague } = buildMaps(pageRaw);
+      const urls = buildUrlMap(pageRaw);
+      const rows = parseFeed(feedRaw);
+      const row = rows.find((r) => r[0] === id);
+      if (!row) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'match not found' }));
+      }
+      const goalPath = urls.get(id);
+      let goals = null;
+      if (goalPath) goals = await goalMinutesFor(id, goalPath);
+      const minute = toMinute(row[1]);
+      let lastGoal = null, held = null;
+      if (Array.isArray(goals) && goals.length) {
+        lastGoal = goals[goals.length - 1];
+        if (minute !== null) held = Math.max(0, minute - lastGoal);
+      } else if (minute !== null) {
+        held = minute;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        id, row: [row[0], row[1], row[2], row[3]],
+        statusLabel: statusLabel(row[1]),
+        score: row[2] + '-' + row[3],
+        home: esc(row[30]), away: esc(row[31]),
+        league: esc(leagues.get(matchToLeague.get(id))),
+        goals: goals || [], lastGoal, held, minute,
+      }));
+    }
 
     let html;
     if (path === '/under') {
