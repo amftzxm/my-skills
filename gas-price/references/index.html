@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ราคาน้ำมันวันนี้ - PTT GSH95</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,'Leelawadee UI',Tahoma,sans-serif}
+body{background:#0f172a;color:#e2e8f0;min-height:100vh;padding:16px;padding-bottom:40px}
+.container{max-width:520px;margin:0 auto}
+.header{text-align:center;padding:20px 0 12px}
+.header h1{font-size:24px}
+.header p{color:#94a3b8;margin-top:6px;font-size:14px}
+.badge{display:inline-block;background:#16a34a;color:white;padding:4px 12px;border-radius:999px;font-size:13px;margin-top:10px}
+.hero{background:linear-gradient(135deg,#1d4ed8,#0284c7);border-radius:20px;padding:24px;text-align:center;margin:16px 0;box-shadow:0 10px 30px rgba(2,132,199,.35)}
+.hero small{opacity:.9;font-size:14px}
+.hero .price{font-size:56px;font-weight:800;margin:6px 0;line-height:1}
+.hero .unit{font-size:16px;opacity:.9}
+.hero .station{margin-top:8px;background:rgba(255,255,255,.2);display:inline-block;padding:4px 14px;border-radius:999px;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:14px;text-align:center}
+.card.hl{border-color:#22c55e;background:#14532d33}
+.card h3{font-size:14px;color:#94a3b8;font-weight:600}
+.card .p{font-size:22px;font-weight:700;margin-top:4px}
+.card .u{font-size:12px;color:#94a3b8}
+.calc{background:#1e293b;border-radius:16px;padding:18px;margin-top:14px;border:1px solid #334155}
+.calc h2{font-size:16px;margin-bottom:10px}
+.calc input{width:100%;padding:12px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:white;font-size:18px;text-align:center}
+.calc .total{text-align:center;font-size:28px;font-weight:800;color:#4ade80;margin-top:10px}
+table{width:100%;margin-top:14px;border-collapse:collapse;background:#1e293b;border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:10px 12px;text-align:left}
+th{background:#334155;color:#cbd5e1}
+tr:nth-child(even) td{background:#0f172a66}
+td:last-child{text-align:right;font-weight:700}
+.footer{text-align:center;color:#64748b;font-size:12px;margin-top:16px;line-height:1.7}
+button.refresh{width:100%;margin-top:12px;padding:12px;border-radius:12px;border:none;background:#22c55e;color:#052e16;font-weight:700;font-size:16px;cursor:pointer}
+button.refresh:active{transform:scale(.98)}
+.note{background:#451a03;border:1px solid #9a3412;color:#fdba74;border-radius:12px;padding:10px 14px;font-size:13px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>⛽ ราคาน้ำมันวันนี้</h1>
+<p id="today-date">5 ตุลาคม 2569 (2026-10-05)</p>
+<div class="badge">อัปเดตล่าสุด: 2 ต.ค. 69 เวลา 05:00 น. +0.75 บาท</div>
+</div>
+
+<div class="hero">
+<small>PTT • ที่คุณเติมประจำ</small>
+<div style="font-size:20px;font-weight:700;margin-top:4px">Gasohol 95 (GSH95)</div>
+<div class="price">40.69</div>
+<div class="unit">บาท / ลิตร</div>
+<div class="station">📍 PTT Station / Bangchak</div>
+</div>
+
+<div class="grid">
+<div class="card"><h3>GSH91</h3><div class="p">40.32</div><div class="u">บาท/ลิตร</div></div>
+<div class="card"><h3>E20</h3><div class="p">35.69</div><div class="u">บาท/ลิตร</div></div>
+<div class="card"><h3>E85</h3><div class="p">31.63</div><div class="u">บาท/ลิตร</div></div>
+<div class="card"><h3>เบนซิน ULG</h3><div class="p">49.68</div><div class="u">บาท/ลิตร PTT</div></div>
+<div class="card"><h3>ดีเซล B7</h3><div class="p">42.19</div><div class="u">บาท/ลิตร</div></div>
+<div class="card"><h3>ดีเซล B20</h3><div class="p">37.19</div><div class="u">บาท/ลิตร</div></div>
+<div class="card"><h3>Premium GSH95</h3><div class="p">47.79</div><div class="u">PTT Super Power</div></div>
+<div class="card"><h3>Premium Diesel</h3><div class="p">50.05</div><div class="u">บาท/ลิตร</div></div>
+</div>
+
+<div class="calc">
+<h2>🧮 คำนวณค่าตเติม GSH95 @ 40.69</h2>
+<input id="liters" type="number" value="30" min="1" max="200" inputmode="decimal">
+<div class="total"><span id="total">1,220.7</span> ฿</div>
+<p style="text-align:center;color:#94a3b8;font-size:13px;margin-top:6px">พิมพ์จำนวนลิตร • อัปเดตอัตโนมัติ</p>
+</div>
+
+<table>
+<tr><th>ชนิดน้ำมัน (PTT)</th><th>ราคา</th></tr>
+<tr><td>⛽ GSH95</td><td>40.69</td></tr>
+<tr><td>⛽ GSH91</td><td>40.32</td></tr>
+<tr><td>⛽ E20</td><td>35.69</td></tr>
+<tr><td>⛽ E85</td><td>31.63</td></tr>
+<tr><td>🛢️ เบนซิน</td><td>49.68</td></tr>
+<tr><td>🚚 ดีเซล B7</td><td>42.19</td></tr>
+<tr><td>🚚 ดีเซล B20</td><td>37.19</td></tr>
+<tr><td>✨ Super Power GSH95</td><td>47.79</td></tr>
+<tr><td>✨ Super Power Diesel</td><td>50.05</td></tr>
+</table>
+
+<div class="note">💡 ราคานี้เป็นราคากลาง กทม. ยังไม่รวมภาษีท้องที่ ตจว. อาจ +0.20-0.50 บาท/ลิตร<br>Shell แพงกว่านิดหน่อย: FuelSave 95 = 41.19 / V-Power 95 = 51.84</div>
+
+<button class="refresh" onclick="location.reload()">🔄 รีเฟรช</button>
+
+<div class="footer">
+ข้อมูลจาก: PTT OR + Bangchak + PPTV / Thairath / SiamNews<br>
+วันที่ 5 ต.ค. 2569 • รันบน localhost ของคุณ<br>
+US avg for ref: $4.37/gal (~ 37 ฿/L)
+</div>
+</div>
+<script>
+const PRICE=40.69;
+const inp=document.getElementById('liters');
+const out=document.getElementById('total');
+function update(){
+ let v=parseFloat(inp.value)||0;
+ out.textContent=(v*PRICE).toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
+}
+inp.addEventListener('input',update);
+update();
+// auto date in Thai
+try{
+ const d=new Date();
+ document.getElementById('today-date').textContent=d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})+' ('+d.toISOString().slice(0,10)+')';
+}catch(e){}
+</script>
+</body>
+</html>

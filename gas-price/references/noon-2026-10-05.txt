@@ -1,0 +1,8 @@
+===== NOON FETCH 2026-10-05 12:12:35 +07 =====
+GSH95 PTT (from index.html): 40.69 Baht/L
+--- live check: PTT OR retail page status ---
+pttor.com HTTP 200 1.454031s
+--- localhost page status ---
+localhost:8000 HTTP 200
+--- US ref AAA .3697 / EIA .47 (Oct 4 2026) ---
+Mon Oct  5 12:12:37 +07 2026
