@@ -171,6 +171,8 @@ function renderPage(groups, live, matched, now) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="30">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="expires" content="0">
 <title>Live Scores</title>
 <style>
   :root { color-scheme: dark; }
@@ -202,10 +204,10 @@ function renderPage(groups, live, matched, now) {
   li.match-item:active { background:#1f232d; }
   li.match-item .chevron { position:absolute; right:14px; top:8px; font-size:20px; color:#6b7280; line-height:1; transition:transform .2s; }
   li.match-item .chevron.rotate { transform:rotate(90deg); }
-  .detail-sheet { position:fixed; top:0; left:0; right:0; bottom:0; background:#0f1115; border-top:1px solid #242833; z-index:100;
+  .detail-sheet { position:fixed; top:0; left:0; right:0; bottom:0; background:#0f1115; border-top:1px solid #242833; z-index:100; visibility:hidden; pointer-events:none;
     transform:translateY(100%); transition:transform .28s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column;
     max-height:100vh; width:100%; box-shadow:0 -6px 24px rgba(0,0,0,.5); }
-  .detail-sheet.open { transform:translateY(0); }
+  .detail-sheet.open { transform:translateY(0); visibility:visible; pointer-events:auto; }
   .detail-sheet-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #242833; }
   .detail-sheet-header h2 { font-size:14.5px; margin:0; color:#e2e8f0; display:flex; gap:8px; }
   .detail-sheet-header h2 span { font-size:11px; color:#8fd6a6; }
@@ -250,6 +252,7 @@ ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
   var sheet = document.getElementById('detail-sheet');
+  console.log('sheet script loaded: sheet=', !!sheet, 'close=', !!close, 'body=', !!body);
   var close = document.getElementById('detail-close');
   var body = document.getElementById('detail-body');
   document.querySelectorAll('.match-item').forEach(function(li){
@@ -263,13 +266,13 @@ ${body}
       sheet.classList.add('open');
       try { document.getElementById('sheet-state').textContent = 'OPEN ' + this.dataset.id; } catch(e){}
       console.log('sheet class now:', sheet.className);
-      fetch('/timeline/' + id).then(function(r){ return r.json(); })
+      fetch('/timeline/' + this.dataset.id).then(function(r){ return r.json(); })
         .then(function(d){ console.log('timeline data:', d); render(d); })
         .catch(function(){ body.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
     });
   });
   close.addEventListener('click', function(){
-    console.log('closing sheet');
+    console.log('closing sheet'); document.title = 'Live Scores';
     sheet.classList.remove('open');
     try { document.getElementById('sheet-state').textContent = 'closed'; } catch(e){}
     document.querySelectorAll('.chevron').forEach(function(c){ c.classList.remove('rotate'); });
@@ -408,6 +411,8 @@ function renderUnder(rows, leagueOf, now) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="30">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="expires" content="0">
 <title>Live - Under 2 Goals</title>
 <style>
   :root { color-scheme: dark; }
@@ -795,6 +800,8 @@ function renderHeld(matches, now) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="60">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="expires" content="0">
 <title>Held - Time Since Last Goal</title>
 <style>
   :root { color-scheme: dark; }
