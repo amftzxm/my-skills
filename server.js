@@ -624,10 +624,12 @@ const HELD_CSS = `
   .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center;
     padding:6px 0 2px; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
-  .mg { display:inline-flex; align-items:center; justify-content:center;
-    min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
-    border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
-    font-variant-numeric:tabular-nums; position:relative; }
+  .mg { display:inline-flex; flex-direction:column; align-items:center;
+    justify-content:center; min-width:46px; padding:4px 8px;
+    background:#0f172a; border:1px solid #334155; border-radius:8px;
+    font-size:13px; font-weight:700; color:#fbbf24;
+    font-variant-numeric:tabular-nums; position:relative; line-height:1.1; }
+  .mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
   .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
   .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
     border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
@@ -668,12 +670,17 @@ function renderHeld(matches, now) {
       const since = m.lastGoal === null ? 'kickoff' : m.lastGoal + "'";
       const hot = m.held >= 30 ? ' hot' : '';
       // Goal badges always visible inline, no button needed.
+      // Each goal shows its minute + elapsed time since the previous goal.
       let goalsInline = '';
       if (m.goals && m.goals.length > 0) {
+        const parts = m.goals.map((g, i) => {
+          const prev = i > 0 ? m.goals[i - 1] : 0;
+          const gap = g - prev;
+          const gapLabel = i === 0 ? 'kickoff' : gap + 'm';
+          return `<span class="mg">${g}'<i>${gapLabel}</i></span>`;
+        }).join('');
         goalsInline = `<div class="goalrow"><div class="goalrow-connector"></div>` +
-          `<div class="goalrow-inner">` +
-          m.goals.map((g) => `<span class="mg">${g}'</span>`).join('') +
-          `</div></div>`;
+          `<div class="goalrow-inner">${parts}</div></div>`;
       }
       return `<div class="card${hot}" data-held="${m.held}">` +
         `<div class="card-head"><span class="teams">${esc(p[30])} <i>vs</i> ` +
@@ -771,10 +778,12 @@ ${now}</footer>
   .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center;
     padding:6px 0 2px; }
   .goalsep { width:1px; height:16px; background:#334155; margin:0 2px; }
-  .mg { display:inline-flex; align-items:center; justify-content:center;
-    min-width:38px; padding:5px 10px; background:#0f172a; border:1px solid #334155;
-    border-radius:8px; font-size:14px; font-weight:700; color:#fbbf24;
-    font-variant-numeric:tabular-nums; position:relative; }
+  .mg { display:inline-flex; flex-direction:column; align-items:center;
+    justify-content:center; min-width:46px; padding:4px 8px;
+    background:#0f172a; border:1px solid #334155; border-radius:8px;
+    font-size:13px; font-weight:700; color:#fbbf24;
+    font-variant-numeric:tabular-nums; position:relative; line-height:1.1; }
+  .mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
   .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
   .goalbtn { background:#1e293b; border:1px solid #334155; color:#fbbf24;
     border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600;
