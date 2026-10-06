@@ -13,13 +13,45 @@
 
 const http = require('http');
 
+const fs = require('fs');
+const path = require('path');
+
 const HOME = 'https://aiscore.mobi/';
 const FEED = 'https://aiscore.mobi/files/tiktok2.txt';
 const PORT = Number(process.env.PORT) || 3000;
-const HOME_TTL_MS = 10 * 60 * 1000;
-const FEED_TTL_MS = 10 * 1000;
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+/**
+ * All adjustable settings. Loaded from config.json if present, else
+ * sensible defaults. Changes are persisted back to config.json by
+ * POST /config/save.
+ */
+let settings = Object.assign({}, {
+  feedTTL: 10000,      // score feed cache TTL (ms)
+  homeTTL: 600000,     // homepage cache TTL (ms)
+  goalTTL: 60000,      // goal detail cache TTL (ms)
+  pollInterval: 10000, // client /api/live poll (ms)
+  clockTz: 'local',    // 'local' | 'UTC' | 'GMT+7'
+  tickBlink: true,     // only the ' blinks
+  highlightRow: true,  // flash row when score changes
+  showHeld: false,     // show "held since" on timeline
+}, JSON.parse(
+  fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE, 'utf8') : '{}'
+));
+
+const HOME_TTL_MS = settings.homeTTL;
+const FEED_TTL_MS = settings.feedTTL;
+const GOAL_TTL_MS = settings.goalTTL;
 const UA = 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 ' +
   'Chrome/120 Mobile Safari/537.36';
+
+function persistSettings() {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(settings, null, 2));
+  } catch (e) {
+    console.error('failed to persist config:', e.message);
+  }
+}
 
 const cache = { home: null, feed: null };
 
@@ -197,6 +229,11 @@ function renderPage(groups, live, matched, now, time) {
   li.match-item .chevron { position:absolute; right:14px; top:50%; font-size:20px; color:#6b7280;
     line-height:1; transition:transform .2s; transform:translateY(-50%); }
   li.match-item .chevron.rotate { transform:translateY(-50%) rotate(90deg); }
+  li.match-item.flash { animation:flashRow .4s ease-out; }
+  @keyframes flashRow {
+    0% { background:#0f5e34; }
+    100% { background:transparent; }
+  }
   li.match-timeline { display:block; background:#0f1115; padding:10px 14px 12px; }
   /* Score timeline shown under a match item after click. */
   li.match-timeline .goalrow { max-height:200px; overflow:hidden; margin:0; padding:0;
@@ -318,7 +355,12 @@ ${body}
     var goals = d.goals || [];
     if (!slot.isConnected) return;
     if (goals.length === 0) {
-      slot.innerHTML = '<div class="tl-empty">no goals yet</div>';
+      var held = d.held !== null ? ' held ' + d.held + 'm' : '';
+      if (settings.showHeld && held) {
+        slot.innerHTML = '<div class="tl-empty">no goals yet' + held + '</div>';
+      } else {
+        slot.innerHTML = '<div class="tl-empty">no goals yet</div>';
+      }
       return;
     }
     var parts = goals.map(function(g, i){
@@ -344,6 +386,7 @@ ${body}
     var raw = String(label).replace(/<[^>]*>/g, '').replace(/[′']/g, '');
     return (raw === 'HT' || raw === 'FT') ? raw : raw + TICK;
   }
+  var highlightedScore = null;
   function teamsHtml(m){
     var h = escHtml(m.home), a = escHtml(m.away);
     var parts = m.score.split('-');
@@ -375,6 +418,11 @@ ${body}
         // Rebuild teams only when the score changed (winner highlight flips).
         if (tm && tm.dataset.s !== m.score) {
           tm.dataset.s = m.score;
+          if (settings.highlightRow && highlightedScore !== m.score) {
+            li.classList.add('flash');
+            highlightedScore = m.score;
+            setTimeout(function(){ li.classList.remove('flash'); highlightedScore = null; }, 400);
+          }
           tm.innerHTML = teamsHtml(m);
           // Refresh an open timeline in place (it stays open; markers update live)
           var slot = li.nextElementSibling;
@@ -405,7 +453,11 @@ ${body}
     }).catch(function(){ /* transient; next tick retries */ });
   }
   function clockTime(){
-    var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
+    var tz;
+    if (settings.clockTz === 'local') tz = undefined;
+    else if (settings.clockTz === 'UTC') tz = 'UTC';
+    else tz = 'Asia/Bangkok';
+    var p = new Intl.DateTimeFormat('en-CA', { timeZone: tz, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
     return p.filter(function(x){ return x.type === 'hour' || x.type === 'minute' || x.type === 'second'; }).map(function(x){ return x.value; }).join(':');
   }
   function tickClock(){
@@ -413,9 +465,52 @@ ${body}
     if (c) c.textContent = clockTime();
   }
   tickClock(); setInterval(tickClock, 1000);
-  setInterval(liveTick, POLL_MS);
-  document.addEventListener('visibilitychange', function(){
-    if (!document.hidden) liveTick(); // catch up immediately when tab returns
+  var settings = {};
+  var bc = new BroadcastChannel('live-scores-settings');
+  function refreshSettings(){
+    fetch('/settings').then(function(r){ return r.json(); }).then(function(s){
+      settings = s;
+      applySettings();
+    }).catch(function(){});
+  }
+  refreshSettings();
+  bc.onmessage = function(e){
+    if (e.data && e.data.type === 'settings-changed') refreshSettings();
+  };
+
+  function applySettings(){
+    // Poll interval: recreate the interval with the new value
+    liveTick();
+    window.__pollInterval = settings.pollInterval;
+    window.__pollTimeout = setInterval(liveTick, settings.pollInterval);
+    if (window.__origPollTimeout) clearInterval(window.__origPollTimeout);
+    window.__origPollTimeout = window.__pollTimeout;
+    // Clock timezone
+    tickClock();
+    if (window.__tickTimeout) clearInterval(window.__tickTimeout);
+    window.__tickTimeout = setInterval(tickClock, 1000);
+    document.dispatchEvent(new CustomEvent('settings-changed', { detail: settings }));
+  }
+
+  document.addEventListener('settings-changed', function(e){
+    var s = e.detail;
+    TICK_OPEN = s.tickBlink ? '<span class="min-tick" aria-hidden="true">' : '';
+    TICK = TICK_OPEN + String.fromCharCode(39) + '</span>';
+    // Refresh all minute labels immediately with new blink behavior
+    document.querySelectorAll('.min').forEach(function(mn){
+      var raw = String(mn.textContent).replace(/[′']/g, '');
+      if (raw === 'HT' || raw === 'FT') return;
+      mn.innerHTML = mn.textContent + TICK_OPEN + String.fromCharCode(39) + '</span>';
+    });
+    // Refresh timeline markers too
+    document.querySelectorAll('.mg span').forEach(function(spn){
+      if (spn.classList.contains('mg')) return;
+      var g = spn.previousElementSibling;
+      if (g && g.classList && g.classList.contains('mg')) {
+        var inner = spn.innerHTML.replace(/[′']/g, '');
+        spn.innerHTML = inner + TICK_OPEN + String.fromCharCode(39) + '</span>';
+      }
+    });
   });
 
 })();
@@ -461,7 +556,6 @@ function buildUrlMap(page) {
 }
 
 const goalCache = new Map();  // id -> { goals: number[]|null, at }
-const GOAL_TTL_MS = 60 * 1000;
 
 /**
  * Goal minutes for one match, from its detail page.
@@ -581,6 +675,57 @@ function renderConfig() {
     cfgRow('/config', 'this page'),
     cfgRow('/health', 'JSON liveness probe'),
   ].join('');
+  const rowsConfig = [
+    // Feed cache TTL
+    '<tr><th><select name="feedTTL" data-default="' + settings.feedTTL + '">' +
+      '<option value="5000" ' + (settings.feedTTL===5000?'selected':'') + '>Feed cache: 5s</option>' +
+      '<option value="10000" ' + (settings.feedTTL===10000?'selected':'') + '>Feed cache: 10s</option>' +
+      '<option value="15000" ' + (settings.feedTTL===15000?'selected':'') + '>Feed cache: 15s</option>' +
+      '<option value="30000" ' + (settings.feedTTL===30000?'selected':'') + '>Feed cache: 30s</option></select></th>' +
+      '<td>How long the score feed is cached — shorter = fresher but more requests</td></tr>',
+    // Homepage cache TTL
+    '<tr><th><select name="homeTTL" data-default="' + settings.homeTTL + '">' +
+      '<option value="300000" ' + (settings.homeTTL===300000?'selected':'') + '>Homepage cache: 5m</option>' +
+      '<option value="600000" ' + (settings.homeTTL===600000?'selected':'') + '>Homepage cache: 10m</option>' +
+      '<option value="1800000" ' + (settings.homeTTL===1800000?'selected':'') + '>Homepage cache: 30m</option>' +
+      '<option value="3600000" ' + (settings.homeTTL===3600000?'selected':'') + '>Homepage cache: 1h</option></select></th>' +
+      '<td>How long league names are cached — leagues change slowly</td></tr>',
+    // Goal cache TTL
+    '<tr><th><select name="goalTTL" data-default="' + settings.goalTTL + '">' +
+      '<option value="15000" ' + (settings.goalTTL===15000?'selected':'') + '>Goal-page cache: 15s</option>' +
+      '<option value="30000" ' + (settings.goalTTL===30000?'selected':'') + '>Goal-page cache: 30s</option>' +
+      '<option value="60000" ' + (settings.goalTTL===60000?'selected':'') + '>Goal-page cache: 60s</option>' +
+      '<option value="120000" ' + (settings.goalTTL===120000?'selected':'') + '>Goal-page cache: 2m</option></select></th>' +
+      '<td>How long one match goal list is cached (goal pages are loaded on demand)</td></tr>',
+    // Poll interval
+    '<tr><th><select name="pollInterval" data-default="' + settings.pollInterval + '">' +
+      '<option value="5000" ' + (settings.pollInterval===5000?'selected':'') + '>Poll: every 5s</option>' +
+      '<option value="10000" ' + (settings.pollInterval===10000?'selected':'') + '>Poll: every 10s</option>' +
+      '<option value="15000" ' + (settings.pollInterval===15000?'selected':'') + '>Poll: every 15s</option>' +
+      '<option value="30000" ' + (settings.pollInterval===30000?'selected':'') + '>Poll: every 30s</option></select></th>' +
+      '<td>How often the browser polls /api/live for live score updates</td></tr>',
+    // Clock timezone
+    '<tr><th><select name="clockTz" data-default="' + settings.clockTz + '">' +
+      '<option value="local" ' + (settings.clockTz==='local'?'selected':'') + '>Clock: browser local time</option>' +
+      '<option value="UTC" ' + (settings.clockTz==='UTC'?'selected':'') + '>Clock: UTC</option>' +
+      '<option value="GMT+7" ' + (settings.clockTz==='GMT+7'?'selected':'') + '>Clock: GMT+7 (Thailand)</option></select></th>' +
+      '<td>Which timezone the clock shows</td></tr>',
+    // Tick blink
+    '<tr><th><select name="tickBlink" data-default="' + settings.tickBlink + '">' +
+      '<option value="true" ' + (settings.tickBlink?'selected':'') + '>Tick blink: on</option>' +
+      '<option value="false" ' + (!settings.tickBlink?'selected':'') + '>Tick blink: off</option></select></th>' +
+      '<td>Only the minute apostrophe blinks — number stays solid</td></tr>',
+    // Highlight row
+    '<tr><th><select name="highlightRow" data-default="' + settings.highlightRow + '">' +
+      '<option value="true" ' + (settings.highlightRow?'selected':'') + '>Row highlight: on</option>' +
+      '<option value="false" ' + (!settings.highlightRow?'selected':'') + '>Row highlight: off</option></select></th>' +
+      '<td>Flash the row when a score changes</td></tr>',
+    // Show held
+    '<tr><th><select name="showHeld" data-default="' + settings.showHeld + '">' +
+      '<option value="true" ' + (settings.showHeld?'selected':'') + '>Held-timer: on</option>' +
+      '<option value="false" ' + (!settings.showHeld?'selected':'') + '>Held-timer: off</option></select></th>' +
+      '<td>Show "held X m" on the goal timeline</td></tr>',
+  ].join('');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -606,11 +751,16 @@ function renderConfig() {
   .cfg { background:#171a21; border:1px solid #242833; border-radius:10px; margin:12px 0; overflow:hidden; }
   .cfg h2 { font-size:13px; font-weight:600; color:#9ecbff; padding:10px 14px; margin:0;
     background:#1b1f28; border-bottom:1px solid #242833; }
+  .cfg h2 .hint { color:#6b7280; font-weight:400; margin-left:8px; }
   table { width:100%; border-collapse:collapse; font-size:13px; }
   th, td { text-align:left; padding:8px 14px; border-bottom:1px solid #1f232d; vertical-align:top; }
   tr:last-child th, tr:last-child td { border-bottom:none; }
   th { color:#8a8f98; font-weight:600; width:38%; }
   td { color:#cfd3da; word-break:break-word; }
+  select { background:#1f232d; color:#e6e6e6; border:1px solid #242833; border-radius:6px;
+    padding:4px 8px; font-size:12.5px; cursor:pointer; }
+  select:hover { border-color:#8a8f98; }
+  .save-status { font-size:12px; color:#6b7280; margin-top:10px; text-align:center; }
   footer { color:#6b7280; font-size:12px; margin-top:20px; text-align:center; }
 </style>
 </head>
@@ -622,6 +772,8 @@ function renderConfig() {
 <section class="cfg"><h2>Data source &amp; caching</h2><table>${rowsData}</table></section>
 <section class="cfg"><h2>Live UI behaviour</h2><table>${rowsUi}</table></section>
 <section class="cfg"><h2>Routes</h2><table>${rowsRoutes}</table></section>
+<section class="cfg" id="adjustments"><h2>Adjustments <span class="hint">— click a dropdown to change it live</span></h2><table>${rowsConfig}</table></section>
+<div class="save-status" id="save-status">settings auto-saved on change</div>
 <footer>Source: aiscore.mobi &middot; localhost:${PORT}</footer>
 <script>
 (function(){
@@ -648,6 +800,35 @@ function renderConfig() {
       }
     });
   }
+  // Config dropdowns: save changes live and notify other tabs.
+  var bc = new BroadcastChannel('live-scores-settings');
+  var statusEl = document.getElementById('save-status');
+  function saveStatus(msg){
+    if (statusEl) statusEl.textContent = msg;
+  }
+  var selects = document.querySelectorAll('#adjustments select, select[name]');
+  selects.forEach(function(sel){
+    sel.addEventListener('change', function(){
+      var payload = {};
+      payload[sel.name] = sel.value;
+      saveStatus('saving...');
+      fetch('/config/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (d.ok){ saveStatus('saved · ' + sel.options[sel.selectedIndex].text);
+          bc.postMessage({ type: 'settings-changed', key: sel.name });
+        } else { saveStatus('save failed: ' + d.error); }
+      }).catch(function(e){ saveStatus('save failed'); console.error(e); });
+    });
+  });
+  // Also react to settings changed in other tabs.
+  bc.onmessage = function(e){
+    if (e.data && e.data.type === 'settings-changed'){
+      saveStatus('synced from another tab');
+    }
+  };
 })();
 </script>
 </body>
@@ -674,13 +855,51 @@ async function handle(req, res) {
     return res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
   }
 
-  if (path !== '/' && path !== '/config' && path !== '/api/live' && !path.match(/^\/timeline\//)) {
+  if (path !== '/' && path !== '/config' && path !== '/config/save' && path !== '/settings' && path !== '/api/live' && !path.match(/^\/timeline\//)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
   }
 
   if (path === '/config') {
-    return res.end(renderConfig());
+    try {
+      return res.end(renderConfig());
+    } catch (e) {
+      console.error('CONFIG ERROR:', e.message, e.stack);
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('Server error: ' + e.message + '\n');
+    }
+  }
+
+  if (path === '/settings') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(settings));
+  }
+
+  if (path === '/config/save' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (d) => { body += d.toString(); if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      try {
+        const payload = JSON.parse(body);
+        for (const key of Object.keys(payload)) {
+          if (key === 'feedTTL' && [5000, 10000, 15000, 30000].includes(Number(payload.feedTTL))) settings.feedTTL = Number(payload.feedTTL);
+          else if (key === 'homeTTL' && [300000, 600000, 1800000, 3600000].includes(Number(payload.homeTTL))) settings.homeTTL = Number(payload.homeTTL);
+          else if (key === 'goalTTL' && [15000, 30000, 60000, 120000].includes(Number(payload.goalTTL))) settings.goalTTL = Number(payload.goalTTL);
+          else if (key === 'pollInterval' && [5000, 10000, 15000, 30000].includes(Number(payload.pollInterval))) settings.pollInterval = Number(payload.pollInterval);
+          else if (key === 'clockTz' && ['local', 'UTC', 'GMT+7'].includes(payload.clockTz)) settings.clockTz = payload.clockTz;
+          else if (key === 'tickBlink' && typeof payload.tickBlink === 'boolean') settings.tickBlink = payload.tickBlink;
+          else if (key === 'highlightRow' && typeof payload.highlightRow === 'boolean') settings.highlightRow = payload.highlightRow;
+          else if (key === 'showHeld' && typeof payload.showHeld === 'boolean') settings.showHeld = payload.showHeld;
+        }
+        persistSettings();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: true, settings }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
   }
 
   try {
