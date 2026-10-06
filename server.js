@@ -142,8 +142,7 @@ function renderPage(groups, live, matched, now, time) {
   body { margin:0; padding:16px 16px 68px; background:#0f1115; color:#e6e6e6;
     font:15px/1.5 system-ui,-apple-system,sans-serif; }
   h1 { font-size:20px; margin:0 0 4px; }
-  .meta { color:#8a8f98; font-size:13px; display:inline-flex; align-items:center; gap:8px; margin-bottom:6px; }
-  .meta-sub { font-size:14px; }
+  .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; display:inline-flex; align-items:center; gap:8px; }
   .clock { color:#f0b429; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; }
   .live-badge { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#0d2416,#0a1f14); border:1px solid #16a34a; border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; color:#4ade80; letter-spacing:.02em; }
   .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px rgba(74,222,128,.5); animation:pulse 1.4s ease-in-out infinite; }
@@ -205,8 +204,7 @@ function renderPage(groups, live, matched, now, time) {
 </head>
 <body>
 <h1>Live Scores</h1>
-<p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span></p>
-<p class="meta meta-sub" id="meta-sub"><span class="clock"><span id="clock-now">${time}</span> GMT+7</span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
+<p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span><span class="meta-separator">&middot;</span><span class="clock"><span id="clock-now">${time}</span> GMT+7</span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
@@ -321,13 +319,13 @@ ${body}
         if (mn && mn.textContent !== 'FT') { mn.textContent = 'FT'; mn.classList.add('ft'); }
       });
       var line = document.getElementById('meta-line');
-      var sub = document.getElementById('meta-sub');
-      if (line && sub) {
+      if (line) {
         var n = document.querySelectorAll('li.match-item').length;
         var k = document.querySelectorAll('section').length;
-        var min = clockTime().slice(0,5);
-        line.innerHTML = '<span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">updated ' + min + '</span></span></span>';
-        sub.innerHTML = '<span class="clock"><span id="clock-now">' + clockTime() + '</span> GMT+7</span>' +
+        var clock = clockTime(); // HH:MM:SS
+        line.innerHTML = '<span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">updated ' + clock + '</span></span></span>' +
+          '<span class="meta-separator">&middot;</span>' +
+          '<span class="clock"><span id="clock-now">' + clock + '</span> GMT+7</span>' +
           '<span class="meta-separator">&middot;</span>' +
           '<span class="info"><span id="match-count">' + n + '</span> matches &middot; <span id="league-count">' + k + '</span> leagues</span>';
         var dot = line.querySelector('.live-badge .live-dot');
