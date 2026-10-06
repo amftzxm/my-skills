@@ -143,6 +143,17 @@ function renderPage(groups, live, matched, now, time) {
   body { margin:0; padding:16px 16px 68px; background:#0f1115; color:#e6e6e6;
     font:15px/1.5 system-ui,-apple-system,sans-serif; }
   h1 { font-size:20px; margin:0 0 4px; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .topbar h1 { margin:0; }
+  .nav { position:relative; }
+  #nav-btn { background:#171a21; color:#e6e6e6; border:1px solid #242833; border-radius:8px;
+    font-size:17px; line-height:1; padding:7px 11px; cursor:pointer; }
+  #nav-btn:hover { background:#1f232d; }
+  .nav-menu { position:absolute; right:0; top:calc(100% + 6px); min-width:160px; z-index:50;
+    background:#171a21; border:1px solid #242833; border-radius:10px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,.45); }
+  .nav-menu a { display:block; padding:10px 14px; color:#cfd3da; text-decoration:none; font-size:14px; }
+  .nav-menu a:hover, .nav-menu a.active { background:#1f232d; color:#fff; }
   .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; display:inline-flex; align-items:center; gap:8px; }
   .live-badge { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#0d2416,#0a1f14); border:1px solid #16a34a; border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; color:#4ade80; letter-spacing:.02em; }
   .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px rgba(74,222,128,.5); animation:pulse 1.4s ease-in-out infinite; }
@@ -231,11 +242,37 @@ function renderPage(groups, live, matched, now, time) {
 </style>
 </head>
 <body>
-<h1>Live Scores</h1>
+<div class="topbar"><h1>Live Scores</h1>
+<div class="nav"><button id="nav-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
+<div id="nav-menu" class="nav-menu" hidden><a href="/">Live scores</a><a href="/config">Config</a></div></div></div>
 <p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
+  // Top-right dropdown: toggles the nav menu, closes on outside click or Escape.
+  var navBtn = document.getElementById('nav-btn');
+  var navMenu = document.getElementById('nav-menu');
+  if (navBtn && navMenu) {
+    navBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = navMenu.hasAttribute('hidden');
+      if (open) { navMenu.removeAttribute('hidden'); navBtn.setAttribute('aria-expanded', 'true'); }
+      else { navMenu.setAttribute('hidden', ''); navBtn.setAttribute('aria-expanded', 'false'); }
+    });
+    document.addEventListener('click', function(e){
+      if (!navMenu.hasAttribute('hidden') && !navMenu.contains(e.target)) {
+        navMenu.setAttribute('hidden', '');
+        navBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !navMenu.hasAttribute('hidden')) {
+        navMenu.setAttribute('hidden', '');
+        navBtn.setAttribute('aria-expanded', 'false');
+        navBtn.focus();
+      }
+    });
+  }
   function closeOthers(except){
     document.querySelectorAll('li.match-timeline').forEach(function(tl){
       if (tl !== except && tl.parentNode) tl.parentNode.removeChild(tl);
@@ -499,6 +536,126 @@ function localNow() {
 
 
 /**
+ * Config page: every knob and behaviour of this app in one place.
+ * All values come straight from the live constants above, so the page
+ * can never drift out of date.
+ */
+function fmtMs(ms) {
+  if (ms < 1000) return ms + ' ms';
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  return Math.round(s / 60) + 'm ' + (s % 60) + 's';
+}
+
+function cfgRow(k, v) {
+  return '<tr><th>' + esc(k) + '</th><td>' + v + '</td></tr>';
+}
+
+function renderConfig() {
+  const rowsServer = [
+    cfgRow('Port', 'localhost:' + PORT + ' (override with PORT=)'),
+    cfgRow('Node', process.version),
+    cfgRow('Uptime', fmtMs(Math.round(process.uptime() * 1000))),
+    cfgRow('Server time', esc(localNow())),
+    cfgRow('Dependencies', 'zero — Node stdlib only'),
+  ].join('');
+  const rowsData = [
+    cfgRow('Homepage feed', esc(HOME)),
+    cfgRow('Score feed', esc(FEED)),
+    cfgRow('Feed cache TTL', fmtMs(FEED_TTL_MS) + ' — poller rhythm'),
+    cfgRow('Homepage cache TTL', fmtMs(HOME_TTL_MS) + ' — leagues change slowly'),
+    cfgRow('Goal-page cache TTL', fmtMs(GOAL_TTL_MS) + ' — per-match detail pages'),
+    cfgRow('Upstream UA', esc(UA)),
+  ].join('');
+  const rowsUi = [
+    cfgRow('Client poll', 'every ' + fmtMs(10000) + ' via /api/live — patches scores in place'),
+    cfgRow('Badge', 'LIVE · updated HH:MM:SS, pulse on refresh'),
+    cfgRow('Minute tick', 'only the ’ blinks — number stays solid; HT/FT plain grey'),
+    cfgRow('Timeline', 'tap a match → /timeline/:id goal rail + spinner while loading'),
+    cfgRow('Nav', '☰ top-right → Live scores / Config'),
+  ].join('');
+  const rowsRoutes = [
+    cfgRow('/', 'Live homepage (HTML)'),
+    cfgRow('/api/live', 'JSON poll feed: id, score, clock'),
+    cfgRow('/timeline/:id', 'JSON goal minutes for one match'),
+    cfgRow('/config', 'this page'),
+    cfgRow('/health', 'JSON liveness probe'),
+  ].join('');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Config · Live Scores</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px 16px 68px; background:#0f1115; color:#e6e6e6;
+    font:15px/1.5 system-ui,-apple-system,sans-serif; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .topbar h1 { font-size:20px; margin:0; }
+  .nav { position:relative; }
+  #nav-btn { background:#171a21; color:#e6e6e6; border:1px solid #242833; border-radius:8px;
+    font-size:17px; line-height:1; padding:7px 11px; cursor:pointer; }
+  #nav-btn:hover { background:#1f232d; }
+  .nav-menu { position:absolute; right:0; top:calc(100% + 6px); min-width:160px; z-index:50;
+    background:#171a21; border:1px solid #242833; border-radius:10px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,.45); }
+  .nav-menu a { display:block; padding:10px 14px; color:#cfd3da; text-decoration:none; font-size:14px; }
+  .nav-menu a:hover, .nav-menu a.active { background:#1f232d; color:#fff; }
+  .cfg { background:#171a21; border:1px solid #242833; border-radius:10px; margin:12px 0; overflow:hidden; }
+  .cfg h2 { font-size:13px; font-weight:600; color:#9ecbff; padding:10px 14px; margin:0;
+    background:#1b1f28; border-bottom:1px solid #242833; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 14px; border-bottom:1px solid #1f232d; vertical-align:top; }
+  tr:last-child th, tr:last-child td { border-bottom:none; }
+  th { color:#8a8f98; font-weight:600; width:38%; }
+  td { color:#cfd3da; word-break:break-word; }
+  footer { color:#6b7280; font-size:12px; margin-top:20px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="topbar"><h1>Config</h1>
+<div class="nav"><button id="nav-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
+<div id="nav-menu" class="nav-menu" hidden><a href="/">Live scores</a><a href="/config" class="active">Config</a></div></div></div>
+<section class="cfg"><h2>Server</h2><table>${rowsServer}</table></section>
+<section class="cfg"><h2>Data source &amp; caching</h2><table>${rowsData}</table></section>
+<section class="cfg"><h2>Live UI behaviour</h2><table>${rowsUi}</table></section>
+<section class="cfg"><h2>Routes</h2><table>${rowsRoutes}</table></section>
+<footer>Source: aiscore.mobi &middot; localhost:${PORT}</footer>
+<script>
+(function(){
+  var navBtn = document.getElementById('nav-btn');
+  var navMenu = document.getElementById('nav-menu');
+  if (navBtn && navMenu) {
+    navBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = navMenu.hasAttribute('hidden');
+      if (open) { navMenu.removeAttribute('hidden'); navBtn.setAttribute('aria-expanded', 'true'); }
+      else { navMenu.setAttribute('hidden', ''); navBtn.setAttribute('aria-expanded', 'false'); }
+    });
+    document.addEventListener('click', function(e){
+      if (!navMenu.hasAttribute('hidden') && !navMenu.contains(e.target)) {
+        navMenu.setAttribute('hidden', '');
+        navBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !navMenu.hasAttribute('hidden')) {
+        navMenu.setAttribute('hidden', '');
+        navBtn.setAttribute('aria-expanded', 'false');
+        navBtn.focus();
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>`;
+}
+
+
+/**
  * Page: how long each scoreline has held.
  *
  * "Held" = minutes since the last goal. A 0-0 that has never been scored
@@ -517,9 +674,13 @@ async function handle(req, res) {
     return res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
   }
 
-  if (path !== '/' && path !== '/api/live' && !path.match(/^\/timeline\//)) {
+  if (path !== '/' && path !== '/config' && path !== '/api/live' && !path.match(/^\/timeline\//)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
+  }
+
+  if (path === '/config') {
+    return res.end(renderConfig());
   }
 
   try {
