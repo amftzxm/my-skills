@@ -126,7 +126,7 @@ const NAV_CSS = `
   .tab.on { color:#4ade80; border-top-color:#4ade80; background:#16211a; }
 `;
 
-function renderPage(groups, live, matched, now) {
+function renderPage(groups, live, matched, now, time) {
   const ordered = [...groups.entries()].sort((a, b) => {
     if (a[0] === '(unknown)') return 1;
     if (b[0] === '(unknown)') return -1;
@@ -181,6 +181,14 @@ function renderPage(groups, live, matched, now) {
     font:15px/1.5 system-ui,-apple-system,sans-serif; }
   h1 { font-size:20px; margin:0 0 4px; }
   .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; }
+  .live-clock { color:#f0b429; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .live-clock span { font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; }
+  .live-indicator { display:inline-flex; align-items:center; gap:6px; }
+  .live-indicator i { display:inline-block; width:9px; height:9px; border-radius:50%; background:#34d399; animation:pulse 1.4s ease-out infinite; transform-origin:center; }
+  .live-indicator.refreshed i { animation:none; }
+  .live-indicator.refreshed i::after { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#34d399; animation:refreshPulse 0.6s ease-out; }
+  @keyframes refreshPulse { 0%{transform:scale(.6);opacity:.4;} 50%{transform:scale(1.5);opacity:1;} 100%{transform:scale(.6);opacity:.4;} }
+  @keyframes pulse { 0%{opacity:.35;} 50%{opacity:1;} 100%{opacity:.35;} }
   section { background:#171a21; border:1px solid #242833;
     border-radius:10px; margin-bottom:12px; overflow:hidden; }
   h2 { font-size:13px; font-weight:600; color:#9ecbff; padding:10px 14px;
@@ -235,7 +243,7 @@ ${NAV_CSS}
 <body>
 ${navBar('/')}
 <h1>Live Scores</h1>
-<p class="meta" id="meta-line">${live} matches &middot; ${groups.size} leagues &middot; generated ${now} &middot; <span id="live-age">live</span></p>
+<p class="meta" id="meta-line">${live} matches &middot; ${groups.size} leagues &middot; <span class="live-clock"><span id="clock-now">${time}</span> GMT+7</span> &middot; <span id="live-indicator" class="live-indicator"><i></i> live</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
@@ -353,10 +361,22 @@ ${body}
       if (line) {
         var n = document.querySelectorAll('li.match-item').length;
         line.innerHTML = n + ' matches &middot; updated ' + escHtml(d.now) +
-          ' &middot; <span id="live-age">auto</span>';
+          ' &middot; <span class="live-clock"><span id="clock-now">' + clockTime() + '</span> GMT+7</span>' +
+          ' &middot; <span id="live-indicator" class="live-indicator"><i></i> auto</span>';
+        var ind = document.getElementById('live-indicator');
+        if (ind) { ind.classList.add('refreshed'); setTimeout(function(){ ind.classList.remove('refreshed'); }, 600); }
       }
     }).catch(function(){ /* transient; next tick retries */ });
   }
+  function clockTime(){
+    var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
+    return p.filter(function(x){ return x.type === 'hour' || x.type === 'minute' || x.type === 'second'; }).map(function(x){ return x.value; }).join(':');
+  }
+  function tickClock(){
+    var c = document.getElementById('clock-now');
+    if (c) c.textContent = clockTime();
+  }
+  tickClock(); setInterval(tickClock, 1000);
   setInterval(liveTick, POLL_MS);
   document.addEventListener('visibilitychange', function(){
     if (!document.hidden) liveTick(); // catch up immediately when tab returns
@@ -1052,6 +1072,8 @@ async function handle(req, res) {
     const { leagues, matchToLeague } = buildMaps(page);
     const urls = buildUrlMap(page);
     const rows = parseFeed(feedRaw);
+    const timeParts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
+    const time = timeParts.filter(function(x){ return x.type === 'hour' || x.type === 'minute' || x.type === 'second'; }).map(function(x){ return x.value; }).join(':');
     const now = localNow();
 
     if (path.match(/^\/timeline\/(\d+)$/)) {
@@ -1183,7 +1205,7 @@ async function handle(req, res) {
       html = renderAll(matches, now);
     } else {
       const { groups, live, matched } = groupByLeague(page, feedRaw);
-      html = renderPage(groups, live, matched, now);
+      html = renderPage(groups, live, matched, now, time);
     }
 
     res.writeHead(200, {
