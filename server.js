@@ -197,7 +197,31 @@ function renderPage(groups, live, matched, now, time) {
   li.match-timeline .mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
   li.match-timeline .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
   li.match-timeline .tl-empty { font-size:12px; color:#8a8f98; padding:4px 0; }
-  .loading { text-align:center; color:#8a8f98; padding:40px 20px; font-size:13px; }
+  .loading {
+    text-align:center;
+    color:#8a8f98;
+    padding:20px 0;
+    font-size:13px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:60px;
+  }
+  .spinner {
+    display:block;
+    width:24px;
+    height:24px;
+    border:3px solid rgba(138,143,152,0.3);
+    border-radius:50%;
+    border-top-color:#8a8f98;
+    animation:spin 0.8s linear infinite;
+    margin:12px auto;
+  }
+  @keyframes spin {
+    0% { transform:rotate(0deg); }
+    100% { transform:rotate(360deg); }
+  }
   footer { color:#6b7280; font-size:12px; margin-top:20px; text-align:center; }
 </style>
 </head>
@@ -239,12 +263,12 @@ ${body}
       this.classList.add('open');
       var loading = document.createElement('li');
       loading.className = 'match-timeline';
-      loading.innerHTML = '<div class="loading">loading timeline...</div>';
+      loading.innerHTML = '<div class="spinner"></div>';
       this.parentNode.insertBefore(loading, this.nextSibling);
       var self = this;
       fetch('/timeline/' + id).then(function(r){ return r.json(); })
         .then(function(d){ renderInto(d, loading, self); })
-        .catch(function(){ loading.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
+        .catch(function(){ console.error('Failed to load timeline for match ' + id); loading.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
     });
   }
   document.querySelectorAll('.match-item').forEach(bindItem);
