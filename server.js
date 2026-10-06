@@ -142,15 +142,16 @@ function renderPage(groups, live, matched, now, time) {
   body { margin:0; padding:16px 16px 68px; background:#0f1115; color:#e6e6e6;
     font:15px/1.5 system-ui,-apple-system,sans-serif; }
   h1 { font-size:20px; margin:0 0 4px; }
-  .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; }
-  .live-clock { color:#f0b429; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .live-clock span { font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; }
-  .live-indicator { display:inline-flex; align-items:center; gap:6px; }
-  .live-indicator i { display:inline-block; width:9px; height:9px; border-radius:50%; background:#34d399; animation:pulse 1.4s ease-out infinite; transform-origin:center; }
-  .live-indicator.refreshed i { animation:none; }
-  .live-indicator.refreshed i::after { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#34d399; animation:refreshPulse 0.6s ease-out; }
-  @keyframes refreshPulse { 0%{transform:scale(.6);opacity:.4;} 50%{transform:scale(1.5);opacity:1;} 100%{transform:scale(.6);opacity:.4;} }
-  @keyframes pulse { 0%{opacity:.35;} 50%{opacity:1;} 100%{opacity:.35;} }
+  .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; display:inline-flex; align-items:center; gap:8px; }
+  .clock { color:#f0b429; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .live-badge { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#0d2416,#0a1f14); border:1px solid #16a34a; border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; color:#4ade80; letter-spacing:.02em; }
+  .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px rgba(74,222,128,.5); animation:pulse 1.4s ease-in-out infinite; }
+  .live-badge.refreshed .live-dot { animation:none; }
+  .live-badge.refreshed .live-dot::after { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ade80; animation:refreshPulse 0.6s ease-out; }
+  @keyframes refreshPulse { 0%{transform:scale(.6);opacity:.4;} 50%{transform:scale(1.7);opacity:1;} 100%{transform:scale(.6);opacity:.4;} }
+  @keyframes pulse { 0%{opacity:.4;} 50%{opacity:1;} 100%{opacity:.4;} }
+  .meta-separator { color:#334155; }
+  .info { color:#8a8f98; font-size:13px; }
   section { background:#171a21; border:1px solid #242833;
     border-radius:10px; margin-bottom:12px; overflow:hidden; }
   h2 { font-size:13px; font-weight:600; color:#9ecbff; padding:10px 14px;
@@ -203,7 +204,7 @@ function renderPage(groups, live, matched, now, time) {
 </head>
 <body>
 <h1>Live Scores</h1>
-<p class="meta" id="meta-line">${live} matches &middot; ${groups.size} leagues &middot; <span class="live-clock"><span id="clock-now">${time}</span> GMT+7</span> &middot; <span id="live-indicator" class="live-indicator"><i></i> live</span></p>
+<p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span><span class="meta-separator">&middot;</span><span class="clock"><span id="clock-now">${time}</span> GMT+7</span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
@@ -320,11 +321,14 @@ ${body}
       var line = document.getElementById('meta-line');
       if (line) {
         var n = document.querySelectorAll('li.match-item').length;
-        line.innerHTML = n + ' matches &middot; updated ' + escHtml(d.now) +
-          ' &middot; <span class="live-clock"><span id="clock-now">' + clockTime() + '</span> GMT+7</span>' +
-          ' &middot; <span id="live-indicator" class="live-indicator"><i></i> auto</span>';
-        var ind = document.getElementById('live-indicator');
-        if (ind) { ind.classList.add('refreshed'); setTimeout(function(){ ind.classList.remove('refreshed'); }, 600); }
+        var k = document.querySelectorAll('section').length;
+        line.innerHTML = '<span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">updated ' + clockTime().slice(0,5) + '</span></span></span>' +
+          '<span class="meta-separator">&middot;</span>' +
+          '<span class="clock"><span id="clock-now">' + clockTime() + '</span> GMT+7</span>' +
+          '<span class="meta-separator">&middot;</span>' +
+          '<span class="info"><span id="match-count">' + n + '</span> matches &middot; <span id="league-count">' + k + '</span> leagues</span>';
+        var dot = line.querySelector('.live-badge .live-dot');
+        if (dot) { dot.classList.add('refreshed'); setTimeout(function(){ dot.classList.remove('refreshed'); }, 600); }
       }
     }).catch(function(){ /* transient; next tick retries */ });
   }
