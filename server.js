@@ -171,7 +171,6 @@ function renderPage(groups, live, matched, now) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="30">
 <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="expires" content="0">
 <title>Live Scores</title>
@@ -236,7 +235,7 @@ ${NAV_CSS}
 <body>
 ${navBar('/')}
 <h1>Live Scores</h1>
-<p class="meta">${live} matches &middot; ${groups.size} leagues &middot; generated ${now} &middot; refreshes every 30s</p>
+<p class="meta" id="meta-line">${live} matches &middot; ${groups.size} leagues &middot; generated ${now} &middot; <span id="live-age">live</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
@@ -252,7 +251,7 @@ ${body}
       if (owner !== except) c.classList.remove('rotate');
     });
   }
-  document.querySelectorAll('.match-item').forEach(function(li){
+  function bindItem(li){
     li.addEventListener('click', function(){
       var id = this.dataset.id;
       var next = this.nextElementSibling;
@@ -279,7 +278,8 @@ ${body}
         .then(function(d){ renderInto(d, loading, self); })
         .catch(function(){ loading.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
     });
-  });
+  }
+  document.querySelectorAll('.match-item').forEach(bindItem);
   function renderInto(d, slot, owner){
     var goals = d.goals || [];
     if (!slot.isConnected) return;
@@ -298,6 +298,70 @@ ${body}
       '<div class="goalrow-inner">' + parts + '</div></div>';
   }
   function escHtml(s){ return String(s).replace(/[&<>"]/g, function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+
+  // --- Live poll: patch scores in place so an open timeline never collapses.
+  //     Replaces the old 30s full-page meta refresh. The shared 10s feed
+  //     cache upstream means more browsers polling does not multiply fetches.
+  var POLL_MS = 10000;
+  function teamsHtml(m){
+    var h = escHtml(m.home), a = escHtml(m.away);
+    var parts = m.score.split('-');
+    var hg = Number(parts[0]), ag = Number(parts[1]);
+    if (!Number.isNaN(hg) && !Number.isNaN(ag)) {
+      if (hg > ag) h = '<span class="lead">' + h + '</span>';
+      else if (ag > hg) a = '<span class="lead">' + a + '</span>';
+    }
+    return h + ' vs ' + a;
+  }
+  function liveTick(){
+    fetch('/api/live').then(function(r){ return r.json(); }).then(function(d){
+      var seen = {};
+      (d.matches || []).forEach(function(m){
+        seen[m.id] = true;
+        var li = document.querySelector('li.match-item[data-id="' + m.id + '"]');
+        if (!li) return; // brand-new matches appear on next manual load
+        var sc = li.querySelector('.score');
+        var mn = li.querySelector('.min');
+        var tm = li.querySelector('.teams');
+        if (sc && sc.textContent !== m.score) sc.textContent = m.score;
+        if (mn) {
+          if (mn.textContent !== m.statusLabel) mn.textContent = m.statusLabel;
+          var isFt = m.statusLabel === 'HT' || m.statusLabel === 'FT';
+          mn.classList.toggle('ft', isFt);
+        }
+        // Rebuild teams only when the score changed (winner highlight flips).
+        if (tm && tm.dataset.s !== m.score) {
+          tm.dataset.s = m.score;
+          tm.innerHTML = teamsHtml(m);
+          // Refresh an open timeline in place (it stays open; markers update live)
+          var slot = li.nextElementSibling;
+          if (slot && slot.classList && slot.classList.contains('match-timeline')) {
+            fetch('/timeline/' + m.id).then(function(r){ return r.json(); })
+              .then(function(td){ if (slot.isConnected) renderInto(td, slot, li); })
+              .catch(function(){});
+          }
+        }
+      });
+      // Matches that left the feed (went FT) stay visible but gray out.
+      document.querySelectorAll('li.match-item').forEach(function(li){
+        if (seen[li.dataset.id]) return;
+        var mn = li.querySelector('.min');
+        if (mn && mn.textContent !== 'FT') { mn.textContent = 'FT'; mn.classList.add('ft'); }
+      });
+      var line = document.getElementById('meta-line');
+      if (line) {
+        var n = document.querySelectorAll('li.match-item').length;
+        line.innerHTML = n + ' matches &middot; updated ' + escHtml(d.now) +
+          ' &middot; <span id="live-age">auto</span>';
+      }
+    }).catch(function(){ /* transient; next tick retries */ });
+  }
+  setInterval(liveTick, POLL_MS);
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) liveTick(); // catch up immediately when tab returns
+  });
+
 })();
 </script></footer>
 </body>
@@ -975,7 +1039,7 @@ async function handle(req, res) {
     return res.end(JSON.stringify({ ok: true, uptime: process.uptime() }));
   }
 
-  if (path !== '/' && path !== '/under' && path !== '/held' && path !== '/all' && !path.match(/^\/timeline\//)) {
+  if (path !== '/' && path !== '/under' && path !== '/held' && path !== '/all' && path !== '/api/live' && !path.match(/^\/timeline\//)) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     return res.end('Not found');
   }
@@ -1026,6 +1090,30 @@ async function handle(req, res) {
         home: esc(row[30]), away: esc(row[31]),
         league: esc(leagues.get(matchToLeague.get(id))),
         goals: goals || [], lastGoal, held, minute,
+      }));
+    }
+
+    // Lightweight JSON for the client poller: just id + score + clock.
+    // Uses the shared 10s feed cache, so upstream fetches stay at <=6/min
+    // no matter how many browsers poll.
+    if (path === '/api/live') {
+      const feedRaw = await get(FEED, FEED_TTL_MS);
+      const pageRaw = await get(HOME, HOME_TTL_MS);
+      const { leagues, matchToLeague } = buildMaps(pageRaw);
+      const rows = parseFeed(feedRaw).filter((p) => p[1] !== 'FT');
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      });
+      return res.end(JSON.stringify({
+        now: localNow(),
+        matches: rows.map((p) => ({
+          id: p[0],
+          score: p[2] + '-' + p[3],
+          statusLabel: statusLabel(p[1]),
+          home: p[30], away: p[31],
+          league: leagues.get(matchToLeague.get(p[0])) || '(unknown)',
+        })),
       }));
     }
 
