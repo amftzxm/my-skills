@@ -189,13 +189,15 @@ function renderPage(groups, live, matched, now, time) {
     display:flex; align-items:stretch; }
   li.match-timeline .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
     border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
-  li.match-timeline .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center; padding:6px 0 2px; }
+  li.match-timeline .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center; gap:12px; padding:8px 2px 4px; position:relative; }
+  li.match-timeline .goalrow-inner::before { content:""; position:absolute; left:0; right:0; top:50%; height:2px;
+    background:#334155; border-radius:2px; transform:translateY(-50%); }
   li.match-timeline .mg { display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
     min-width:46px; padding:4px 8px; background:#0f172a; border:1px solid #334155; border-radius:8px;
     font-size:13px; font-weight:700; color:#fbbf24; font-variant-numeric:tabular-nums;
-    position:relative; line-height:1.1; }
+    position:relative; z-index:1; line-height:1.1; }
   li.match-timeline .mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
-  li.match-timeline .mg + .mg { margin-left:-1px; border-left:2px solid #0f172a; }
+
   li.match-timeline .tl-empty { font-size:12px; color:#8a8f98; padding:4px 0; }
   .loading {
     text-align:center;
