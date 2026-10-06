@@ -63,7 +63,8 @@ function parseFeed(raw) {
 }
 
 function statusLabel(minute) {
-  return minute === 'HT' || minute === 'FT' ? minute : minute + "'";
+  if (minute === 'HT' || minute === 'FT') return minute;
+  return minute + '<span class="min-tick" aria-hidden="true">' + String.fromCharCode(39) + '</span>';
 }
 
 function groupByLeague(page, feedRaw) {
@@ -165,6 +166,8 @@ function renderPage(groups, live, matched, now, time) {
   .min { color:#f0b429; font-variant-numeric:tabular-nums;
     font-size:13px; text-align:right; }
   .min.ft { color:#6b7280; }
+  .min-tick { animation:minBlink 1.1s steps(2,start) infinite; }
+  @keyframes minBlink { to { visibility:hidden; } }
   .score { font-weight:700; font-variant-numeric:tabular-nums; color:#fff; }
   .teams { color:#cfd3da; min-width:0; white-space:nowrap; overflow:hidden;
     text-overflow:ellipsis; }
@@ -298,6 +301,12 @@ ${body}
   //     Replaces the old 30s full-page meta refresh. The shared 10s feed
   //     cache upstream means more browsers polling does not multiply fetches.
   var POLL_MS = 10000;
+  var TICK_OPEN = '<span class="min-tick" aria-hidden="true">';
+  var TICK = TICK_OPEN + String.fromCharCode(39) + '</span>';
+  function mnHtml(label){
+    var raw = String(label).replace(/<[^>]*>/g, '').replace(/[′']/g, '');
+    return (raw === 'HT' || raw === 'FT') ? raw : raw + TICK;
+  }
   function teamsHtml(m){
     var h = escHtml(m.home), a = escHtml(m.away);
     var parts = m.score.split('-');
@@ -320,8 +329,10 @@ ${body}
         var tm = li.querySelector('.teams');
         if (sc && sc.textContent !== m.score) sc.textContent = m.score;
         if (mn) {
-          if (mn.textContent !== m.statusLabel) mn.textContent = m.statusLabel;
-          var isFt = m.statusLabel === 'HT' || m.statusLabel === 'FT';
+          var want = mnHtml(m.statusLabel);
+          if (mn.innerHTML !== want) mn.innerHTML = want;
+          var rawMin = String(m.statusLabel).replace(/<[^>]*>/g, '').replace(/[′']/g, '');
+          var isFt = rawMin === 'HT' || rawMin === 'FT';
           mn.classList.toggle('ft', isFt);
         }
         // Rebuild teams only when the score changed (winner highlight flips).
