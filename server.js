@@ -345,7 +345,7 @@ function renderPage(groups, live, matched, now, time) {
 <div class="nav"><a href="/" class="active" title="Live scores" aria-label="Live scores">⚽</a><a href="/config" title="Config" aria-label="Config">⚙️</a></div></div>
 <p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
 ${body}
-<footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
+<footer><script>
 (function(){
   // Topbar icons are plain links; no dropdown to manage.
   function closeOthers(except){
@@ -408,10 +408,11 @@ ${body}
   function chartSvg(goals, minute, lastGoal, pxWidth, cards){
     var H = 76, PAD = 4;
     var W = Math.max(1, Math.round(pxWidth) || 320);
-    var xEnd = Math.max(minute || 0, lastGoal || 0, 1);
+        var xEnd = 90;                                              // full 90-min scale for positioning
+    var pathEnd = Math.max(minute || 0, lastGoal || 0, 1);      // where the line actually ends
     var yMax = Math.max(goals.length, 1);
-    function X(m){ return (PAD + (m / xEnd) * (W - 2 * PAD)).toFixed(1); }      // drawing coords: 0..xEnd (always fits card)
-    function XT(m){ return (PAD + (m / 90) * (W - 2 * PAD - 28)).toFixed(1); }  // time ticks: 0..90 (always fits card, right reserve)
+    function X(m){ return (PAD + (m / xEnd) * (W - 2 * PAD)).toFixed(1); }      // drawing coords: 0..90 (aligned with ticks)
+    function XT(m){ return (PAD + (m / 90) * (W - 2 * PAD - 28)).toFixed(1); }  // time ticks: 0..90
     function Y(c){ return (H - PAD - (c / yMax) * (H - 2 * PAD)).toFixed(1); }
     // Step-after path: flat until the goal minute, then jump +1.
     var d = 'M' + X(0) + ',' + Y(0);
@@ -421,8 +422,8 @@ ${body}
       // Football emoji at each goal step (text anchored at bottom-center of the step)
       dots += '<text x="' + X(g.minute) + '" y="' + (parseFloat(Y(i + 1)) + 5) + '" text-anchor="middle" dominant-baseline="central" font-size="12" class="sc-goal">⚽</text>';
     });
-    d += ' L' + X(xEnd) + ',' + Y(goals.length);
-    var area = d + ' L' + X(xEnd) + ',' + Y(0) + ' L' + X(0) + ',' + Y(0) + ' Z';
+        d += ' L' + X(pathEnd) + ',' + Y(goals.length);
+    var area = d + ' L' + X(pathEnd) + ',' + Y(0) + ' L' + X(0) + ',' + Y(0) + ' Z';
     // Live "now" dot — blinking marker at current minute & goal count.
     var liveDot = '';
     if (minute && minute > 0) {
@@ -986,7 +987,7 @@ function renderConfig() {
 <section class="cfg"><h2>Routes</h2><table>${rowsRoutes}</table></section>
 <section class="cfg" id="adjustments"><h2>Adjustments <span class="hint">— click a dropdown to change it live</span></h2><table>${rowsConfig}</table></section>
 <div class="save-status" id="save-status">settings auto-saved on change</div>
-<footer>Source: aiscore.mobi &middot; localhost:${PORT}</footer>
+<footer></footer>
 <script>
 (function(){
   // Config dropdowns: save changes live and notify other tabs.
