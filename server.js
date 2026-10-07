@@ -152,7 +152,9 @@ function renderPage(groups, live, matched, now, time) {
         })
         .join('');
       return (
-        '<section><h2><span>' + esc(league) + '</span>' +
+        '<section class="league-section collapsed">' +
+        '<h2 class="league-header">' +
+        '<span>' + esc(league) + '</span>' +
         '<span class="count">' + rows.length + '</span></h2>' +
         '<ul>' + items + '</ul></section>'
       );
@@ -199,6 +201,11 @@ function renderPage(groups, live, matched, now, time) {
     margin:0; background:#1b1f28; border-bottom:1px solid #242833;
     display:flex; justify-content:space-between; gap:10px; }
   h2 .count { color:#6b7280; font-weight:400; }
+  /* League sections: collapsed by default — click header to expand/collapse */
+  section.league-section.collapsed ul {
+    display: none;
+  }
+  h2.league-header { cursor:pointer; user-select:none; }
   ul { list-style:none; margin:0; padding:0; }
   li { display:grid; grid-template-columns:56px 46px 1fr; gap:10px;
     align-items:baseline; padding:8px 14px;
@@ -393,6 +400,11 @@ ${body}
   });
   }
   document.querySelectorAll('.match-item').forEach(bindItem);
+  // Collapse/expand league sections on header click (collapsed by default)
+  document.querySelectorAll('.league-section').forEach(function(sec){
+    var hdr = sec.querySelector('.league-header');
+    if (hdr) hdr.addEventListener('click', function(){ sec.classList.toggle('collapsed'); });
+  });
   /**
    * Simple step-line area chart: total goals over time.
    *
