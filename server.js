@@ -144,6 +144,7 @@ function renderPage(groups, live, matched, now, time) {
           }
           return (
             '<li class="match-item" data-id="' + esc(p[0]) + '" role="button" aria-label="View details for ' + esc(home) + ' vs ' + esc(away) + '">' +
+            '<button class="copy-btn" data-teams="' + esc(home) + ' vs ' + esc(away) + '" aria-label="Copy match name" title="Copy match name">📋</button>' +
             '<span class="teams">' + home + ' vs ' + away + '</span>' +
             '<span class="score">' + esc(p[2]) + '-' + esc(p[3]) + '</span>' +
             '<span class="' + cls + '">' + label + '</span><span class="chevron">›</span></li>'
@@ -229,6 +230,11 @@ function renderPage(groups, live, matched, now, time) {
   li.match-item .chevron { position:absolute; right:14px; top:50%; font-size:20px; color:#6b7280;
     line-height:1; transition:transform .2s; transform:translateY(-50%); }
   li.match-item .chevron.rotate { transform:translateY(-50%) rotate(90deg); }
+  li.match-item .copy-btn { position:absolute; left:14px; top:50%; background:none; border:none; color:#6b7280;
+    font-size:15px; cursor:pointer; padding:4px 6px; border-radius:4px; transition:all .15s;
+    transform:translateY(-50%); line-height:1; }
+  li.match-item .copy-btn:hover { color:#8a8f98; background:rgba(138,143,152,.12); }
+  li.match-item .copy-btn.copied { color:#4ade80; }
   li.match-item.flash { animation:flashRow .4s ease-out; }
   @keyframes flashRow {
     0% { background:#0f5e34; }
@@ -512,6 +518,45 @@ ${body}
       }
     });
   });
+
+  // --- Copy match name button: click the 📋 icon to copy team names to clipboard.
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.copy-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    var text = btn.getAttribute('data-teams') || '';
+    function showCopied(){
+      btn.classList.add('copied');
+      var orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(function(){
+        btn.classList.remove('copied');
+        btn.textContent = orig;
+      }, 1200);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(function(){
+        fallbackCopy(text, btn);
+      });
+    } else {
+      fallbackCopy(text, btn);
+    }
+  });
+  function fallbackCopy(text, btn){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showCopied();
+    } catch(err) {
+      console.error('copy failed', err);
+    }
+    document.body.removeChild(ta);
+  }
 
 })();
 </script></footer>
