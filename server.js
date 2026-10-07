@@ -306,9 +306,8 @@ function renderPage(groups, live, matched, now, time) {
   li.match-timeline .score-tick::before { content:""; position:absolute; left:-2px; right:6px; bottom:-2px; border-top:1px solid #242833; }
   .score-chart .sc-grid line { stroke:#242833; stroke-width:1; vector-effect:non-scaling-stroke; }
   .score-chart .sc-base { stroke:#334155; stroke-width:1; vector-effect:non-scaling-stroke; }
-  .score-chart .sc-area { fill:rgba(240,180,41,.14); stroke:none; }
-  .score-chart .sc-line { fill:none; stroke:#f0b429; stroke-width:1.5;
-    stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .score-chart .sc-home-line { fill:none; stroke:#4ade80; stroke-width:1.5; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .score-chart .sc-away-line { fill:none; stroke:#f87171; stroke-width:1.5; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
   .score-chart .sc-goal { fill:#f0b429; pointer-events:none; }
   .score-chart .sc-now { fill:#4ade80; animation:sc-pulse 1s ease-in-out infinite; }
   @keyframes sc-pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
@@ -408,26 +407,52 @@ ${body}
   function chartSvg(goals, minute, lastGoal, pxWidth, cards){
     var H = 76, PAD = 4;
     var W = Math.max(1, Math.round(pxWidth) || 320);
-        var xEnd = 90;                                              // full 90-min scale for positioning
+    var xEnd = 90;                                              // full 90-min scale for positioning
     var pathEnd = Math.max(minute || 0, lastGoal || 0, 1);      // where the line actually ends
-    var yMax = Math.max(goals.length, 1);
-    function X(m){ return (PAD + (m / xEnd) * (W - 2 * PAD)).toFixed(1); }      // drawing coords: 0..90 (aligned with ticks)
-    function XT(m){ return (PAD + (m / 90) * (W - 2 * PAD - 28)).toFixed(1); }  // time ticks: 0..90
+    var yMax = Math.max(
+      goals.filter(function(g){ return g.team === 'home'; }).length,
+      goals.filter(function(g){ return g.team === 'away'; }).length,
+      1
+    );
+    function X(m){ return (PAD + (m / xEnd) * (W - 2 * PAD)).toFixed(1); }
+    function XT(m){ return (PAD + (m / 90) * (W - 2 * PAD - 28)).toFixed(1); }
     function Y(c){ return (H - PAD - (c / yMax) * (H - 2 * PAD)).toFixed(1); }
-    // Step-after path: flat until the goal minute, then jump +1.
-    var d = 'M' + X(0) + ',' + Y(0);
+    // Build cumulative score series for each team
+    var homeScores = [], awayScores = [];
+    goals.forEach(function(g){
+      var h = homeScores.length > 0 ? homeScores[homeScores.length-1].score : 0;
+      var a = awayScores.length > 0 ? awayScores[awayScores.length-1].score : 0;
+      if (g.team === 'home') h++; else a++;
+      homeScores.push({minute: g.minute, score: h});
+      awayScores.push({minute: g.minute, score: a});
+    });
+    // Home score step-line (green)
+    var dh = 'M' + X(0) + ',' + Y(0);
+    homeScores.forEach(function(g){
+      dh += ' L' + X(g.minute) + ',' + Y(g.score) + ' L' + X(g.minute) + ',' + Y(g.score);
+    });
+    var hs = homeScores.length > 0 ? homeScores[homeScores.length-1].score : 0;
+    dh += ' L' + X(pathEnd) + ',' + Y(hs);
+    // Away score step-line (red)
+    var da = 'M' + X(0) + ',' + Y(0);
+    awayScores.forEach(function(g){
+      da += ' L' + X(g.minute) + ',' + Y(g.score) + ' L' + X(g.minute) + ',' + Y(g.score);
+    });
+    var as = awayScores.length > 0 ? awayScores[awayScores.length-1].score : 0;
+    da += ' L' + X(pathEnd) + ',' + Y(as);
+    // Goal dots colored by team
     var dots = '';
     goals.forEach(function(g, i){
-      d += ' L' + X(g.minute) + ',' + Y(i) + ' L' + X(g.minute) + ',' + Y(i + 1);
-      // Football emoji at each goal step (text anchored at bottom-center of the step)
-      dots += '<text x="' + X(g.minute) + '" y="' + (parseFloat(Y(i + 1)) + 5) + '" text-anchor="middle" dominant-baseline="central" font-size="12" class="sc-goal">⚽</text>';
+      var teamScore = g.team === 'home' ? homeScores[i].score : awayScores[i].score;
+      var dotColor = g.team === 'home' ? '#4ade80' : '#f87171';
+      dots += '<circle cx="' + X(g.minute) + '" cy="' + Y(teamScore) + '" r="3" fill="' + dotColor + '" stroke="#1e293b" stroke-width="1"/>';
+      dots += '<text x="' + X(g.minute) + '" y="' + (parseFloat(Y(teamScore)) + 5) + '" text-anchor="middle" font-size="11" fill="' + dotColor + '">G</text>';
     });
-        d += ' L' + X(pathEnd) + ',' + Y(goals.length);
-    var area = d + ' L' + X(pathEnd) + ',' + Y(0) + ' L' + X(0) + ',' + Y(0) + ' Z';
-    // Live "now" dot — blinking marker at current minute & goal count.
+    // Live "now" dot — position at current minute on the score line
     var liveDot = '';
     if (minute && minute > 0) {
-      liveDot = '<circle class="sc-now" cx="' + X(minute) + '" cy="' + Y(goals.length) + '" r="4"/>';
+      var nowScore = Math.max(hs, as);
+      liveDot = '<circle class="sc-now" cx="' + X(minute) + '" cy="' + Y(nowScore) + '" r="5" fill="none" stroke="#4ade80" stroke-width="2"/>';
     }
     // Card markers on the time axis (above chart)
     var cardSvg = '';
@@ -454,11 +479,11 @@ ${body}
       var x = XT(t);
       ticksHtml += '<span class="score-tick" style="left:' + x + 'px">' + lab + '</span>';
     }
-    return '<svg class="score-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Total goals over time">' +
+    return '<svg class="score-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Score progression">' +
       '<g class="sc-grid">' + grid + '</g>' +
       '<line class="sc-base" x1="' + PAD + '" y1="' + Y(0) + '" x2="' + (W - PAD) + '" y2="' + Y(0) + '"/>' +
-      '<path class="sc-area" d="' + area + '"/>' +
-      '<path class="sc-line" d="' + d + '"/>' +
+      '<path class="sc-home-line" d="' + dh + '"/>' +
+      '<path class="sc-away-line" d="' + da + '"/>' +
       '<g class="sc-dot">' + dots + '</g>' +
       cardSvg +
       liveDot +
