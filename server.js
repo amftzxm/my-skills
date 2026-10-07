@@ -300,7 +300,6 @@ function renderPage(groups, live, matched, now, time) {
      fills the card 1:1 — no scaling, circles stay round. */
   li.match-timeline .chart-host { margin-top:6px; padding-bottom:18px; position:relative; }
   li.match-timeline .score-chart { display:block; width:100%; height:76px; }
-  li.match-timeline .score-ticks { position:relative; left:0; right:0; text-align:center; }
   li.match-timeline .score-tick { position:absolute; font:9px/13px system-ui,-apple-system,sans-serif;
     color:#8a8f98; text-align:right; padding-right:6px; white-space:nowrap; }
   li.match-timeline .score-tick::before { content:""; position:absolute; left:-2px; right:6px; bottom:-2px; border-top:1px solid #242833; }
@@ -487,8 +486,7 @@ ${body}
       '<g class="sc-dot">' + dots + '</g>' +
       cardSvg +
       liveDot +
-      '</svg>' +
-      '<div class="score-ticks">' + ticksHtml + '</div>';
+      '</svg>';
   }
 
   function renderInto(d, slot, owner){
