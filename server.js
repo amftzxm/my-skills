@@ -143,8 +143,8 @@ function renderPage(groups, live, matched, now, time) {
             else if (ag > hg) away = '<span class="lead">' + away + '</span>';
           }
           return (
-            '<li class="match-item" data-id="' + esc(p[0]) + '" role="button" aria-label="View details for ' + esc(home) + ' vs ' + esc(away) + '">' +
-            '<button class="copy-btn" data-teams="' + esc(home) + ' vs ' + esc(away) + '" aria-label="Copy match name" title="Copy match name">📋</button>' +
+            '<li class="match-item" data-id="' + esc(p[0]) + '" data-status="' +
+            esc(String(label).replace(/<[^>]*>/g, '')) + '">' +
             '<span class="teams">' + home + ' vs ' + away + '</span>' +
             '<span class="score">' + esc(p[2]) + '-' + esc(p[3]) + '</span>' +
             '<span class="' + cls + '">' + label + '</span><span class="chevron">›</span></li>'
@@ -218,35 +218,55 @@ function renderPage(groups, live, matched, now, time) {
   .lead { color:#4ade80; }
   .empty { color:#8a8f98; padding:20px; text-align:center; }
 
-  li.match-item { cursor:pointer; position:relative; user-select:none; -webkit-tap-highlight-color:transparent;
+  li.match-item { position:relative; user-select:none; -webkit-tap-highlight-color:transparent;
     /* Two stacked rows: team names on top (full width); beneath, score and
-       match time as separate columns: score | time. */
+       match time as separate columns: score | time. Only the chevron is
+       clickable, so the row itself is inert. */
     grid-template-columns:auto auto minmax(0,1fr); gap:2px 0; padding:8px 36px 8px 14px; }
-  li.match-item:active { background:#1f232d; }
   li.match-item .teams { grid-row:1; grid-column:1 / -1; }
   li.match-item .score { grid-row:2; grid-column:1; justify-self:start; font-size:14px; }
   li.match-item .min { grid-row:2; grid-column:2; justify-self:start;
     border-left:1px solid #2b3040; margin-left:9px; padding-left:9px; font-size:13px; }
-  li.match-item .chevron { position:absolute; right:14px; top:50%; font-size:20px; color:#6b7280;
-    line-height:1; transition:transform .2s; transform:translateY(-50%); }
+  li.match-item .chevron { position:absolute; right:14px; top:50%; font-size:20px; color:#9ecbff;
+    line-height:1; transition:transform .2s, color .15s; transform:translateY(-50%);
+    cursor:pointer; padding:4px 6px; margin:-4px -6px; border-radius:4px; }
+  li.match-item .chevron:hover { color:#fff; background:#1f232d; }
   li.match-item .chevron.rotate { transform:translateY(-50%) rotate(90deg); }
-  li.match-item .copy-btn { position:absolute; left:14px; top:50%; background:none; border:none; color:#6b7280;
-    font-size:15px; cursor:pointer; padding:4px 6px; border-radius:4px; transition:all .15s;
-    transform:translateY(-50%); line-height:1; }
-  li.match-item .copy-btn:hover { color:#8a8f98; background:rgba(138,143,152,.12); }
-  li.match-item .copy-btn.copied { color:#4ade80; }
   li.match-item.flash { animation:flashRow .4s ease-out; }
   @keyframes flashRow {
     0% { background:#0f5e34; }
     100% { background:transparent; }
   }
-  li.match-timeline { display:block; background:#0f1115; padding:10px 14px 12px; }
-  /* Score timeline shown under a match item after click. */
-  li.match-timeline .goalrow { max-height:200px; overflow:hidden; margin:0; padding:0;
-    display:flex; align-items:stretch; }
-  li.match-timeline .goalrow-connector { width:2px; flex:0 0 2px; background:#242833;
-    border-radius:2px; margin:4px 6px 0 0; align-self:stretch; }
-  li.match-timeline .goalrow-inner { display:flex; flex-wrap:nowrap; align-items:center; gap:12px; padding:8px 2px 4px; position:relative; }
+  li.match-timeline { display:block; background:#0f1115; padding:10px 14px 12px;
+    border-top:1px solid #242833; }
+  /* When a timeline is the active one, it gets a ring + glow so the eye
+     lands on it instead of the rest of the list. Cleared when it closes. */
+  li.match-timeline.focused { background:#0c1320; border:1px solid #2f5a8a;
+    border-top:1px solid #2f5a8a; box-shadow:0 0 0 1px #1e3a5e, 0 8px 24px rgba(0,0,0,.45);
+    animation:pulseFocus 1.6s ease-out; }
+  @keyframes pulseFocus {
+    0% { box-shadow:0 0 0 1px #1e3a5e, 0 0 0 0 rgba(47,90,138,.55); }
+    100% { box-shadow:0 0 0 1px #1e3a5e, 0 8px 24px rgba(0,0,0,.45); }
+  }
+  /* Score timeline shown under a match item after click.
+     One horizontal rail; when many goals push it past the viewport it
+     scrolls sideways instead of being clipped (long timelines). */
+  li.match-timeline .goalrow { max-height:200px; margin:0; padding:0 8px 4px 0;
+    display:flex; align-items:center; overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch; scrollbar-width:thin;
+    scrollbar-color:#334155 transparent;
+    /* Right-edge fade as a "more to the right" hint. Inset shadows stay
+       pinned to the box, so they don't travel with scrolled content. */
+    box-shadow:inset -16px 0 14px -10px rgba(0,0,0,.7); }
+  li.match-timeline .goalrow::-webkit-scrollbar { height:6px; }
+  li.match-timeline .goalrow::-webkit-scrollbar-track { background:transparent; }
+  li.match-timeline .goalrow::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+  li.match-timeline .goalrow::-webkit-scrollbar-thumb:hover { background:#475569; }
+  li.match-timeline .goalrow-inner { flex:0 0 auto; min-width:max-content;
+    display:flex; flex-wrap:nowrap; align-items:center; gap:12px;
+    /* No horizontal padding: the rail spans exactly first marker -> last
+       label, so it meets the held label's edge with no stub past it. */
+    padding:8px 0 4px; position:relative; }
   li.match-timeline .goalrow-inner::before { content:""; position:absolute; left:0; right:0; top:50%; height:2px;
     background:#334155; border-radius:2px; transform:translateY(-50%); }
   li.match-timeline .mg { display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
@@ -254,6 +274,17 @@ function renderPage(groups, live, matched, now, time) {
     font-size:13px; font-weight:700; color:#fbbf24; font-variant-numeric:tabular-nums;
     position:relative; z-index:1; line-height:1.1; }
   li.match-timeline .mg i { font-style:normal; font-size:9px; color:#64748b; font-weight:600; }
+  /* Final label after the last goal: minutes since that goal ("held").
+     Amber dashed outline (not filled) so it never reads as another goal;
+     the match time itself is omitted here — the card already shows it.
+     Opaque card-colored background so the rail line stops at this
+     label's edge instead of running through its center. */
+  li.match-timeline .mn-now { display:inline-flex; align-items:center; justify-content:center;
+    min-width:40px; min-height:35px; padding:4px 8px; background:#0f1115;
+    border:1px dashed #f0b429; border-radius:8px; font-size:13px; font-weight:700;
+    color:#f0b429; font-variant-numeric:tabular-nums; position:relative; z-index:1;
+    line-height:1.1; }
+  li.match-timeline.focused .mn-now { background:#0c1320; }
 
   li.match-timeline .tl-empty { font-size:12px; color:#8a8f98; padding:4px 0; }
   .loading {
@@ -329,32 +360,38 @@ ${body}
     });
   }
   function bindItem(li){
-    li.addEventListener('click', function(){
-      var id = this.dataset.id;
-      var next = this.nextElementSibling;
-      var isOpen = next && next.classList && next.classList.contains('match-timeline');
-      // Toggle closed when the open card is clicked again.
-      if (isOpen) {
-        next.parentNode.removeChild(next);
-        this.classList.remove('open');
-        var chevOff = this.querySelector('.chevron');
-        if (chevOff) chevOff.classList.remove('rotate');
-        return;
-      }
-      closeOthers(this);
-      // rotate this item's chevron
-      var chev = this.querySelector('.chevron');
-      if (chev) chev.classList.add('rotate');
-      this.classList.add('open');
-      var loading = document.createElement('li');
-      loading.className = 'match-timeline';
-      loading.innerHTML = '<div class="spinner"></div>';
-      this.parentNode.insertBefore(loading, this.nextSibling);
-      var self = this;
-      fetch('/timeline/' + id).then(function(r){ return r.json(); })
-        .then(function(d){ renderInto(d, loading, self); })
-        .catch(function(){ console.error('Failed to load timeline for match ' + id); loading.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
-    });
+    // Only the chevron opens or closes the timeline. Clicking the team names
+  // copies them instead (that handler calls stopPropagation, so we never
+  // see those clicks here).
+  li.addEventListener('click', function(e){
+    if (!e.target.closest('.chevron')) return;
+    var id = this.dataset.id;
+    var next = this.nextElementSibling;
+    var isOpen = next && next.classList && next.classList.contains('match-timeline');
+    // Toggle closed when the open card's chevron is clicked again.
+    if (isOpen) {
+      next.parentNode.removeChild(next);
+      this.classList.remove('open');
+      var chevOff = this.querySelector('.chevron');
+      if (chevOff) chevOff.classList.remove('rotate');
+      return;
+    }
+    closeOthers(this);
+    // rotate this item's chevron
+    var chev = this.querySelector('.chevron');
+    if (chev) chev.classList.add('rotate');
+    this.classList.add('open');
+    var loading = document.createElement('li');
+    loading.className = 'match-timeline';
+    loading.innerHTML = '<div class="spinner"></div>';
+    this.parentNode.insertBefore(loading, this.nextSibling);
+    // Bring the new card into view and mark it as the focused one.
+    loading.scrollIntoView({ behavior:'smooth', block:'center' });
+    var self = this;
+    fetch('/timeline/' + id).then(function(r){ return r.json(); })
+      .then(function(d){ renderInto(d, loading, self); loading.classList.add('focused'); })
+      .catch(function(){ console.error('Failed to load timeline for match ' + id); loading.innerHTML = '<div class="loading" style="color:#ff9a9a">failed to load timeline</div>'; });
+  });
   }
   document.querySelectorAll('.match-item').forEach(bindItem);
   function renderInto(d, slot, owner){
@@ -375,9 +412,31 @@ ${body}
       var label = i === 0 ? 'kickoff' : (gap === 0 ? 'same' : gap + 'm');
       return '<span class="mg">' + g + '′<i>' + label + '</i></span>';
     }).join('');
+    // Final label after the last goal: minutes since that goal. The
+    // current match time is deliberately omitted — the match card already
+    // shows it. Held is null at HT/FT (the feed carries no live clock
+    // then), where the rail simply ends at the last goal.
+    var heldLabel = (d.held === null || d.held === undefined) ? '' : escHtml(d.held + 'm');
     slot.innerHTML =
-      '<div class="goalrow"><div class="goalrow-connector"></div>' +
-      '<div class="goalrow-inner">' + parts + '</div></div>';
+      '<div class="goalrow">' +
+      '<div class="goalrow-inner">' + parts +
+      (heldLabel ? '<span class="mn-now">' + heldLabel + '</span>' : '') +
+      '</div></div>';
+    // Mouse wheels scroll vertically; translate that to horizontal so
+    // desktop users can reach markers past the edge (touch just works).
+    var row = slot.querySelector('.goalrow');
+    if (row) {
+      row.addEventListener('wheel', function(e){
+        if (this.scrollWidth <= this.clientWidth) return;
+        var delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+        var atStart = this.scrollLeft <= 0;
+        var atEnd = this.scrollLeft + this.clientWidth >= this.scrollWidth - 1;
+        if ((delta > 0 && !atEnd) || (delta < 0 && !atStart)) {
+          e.preventDefault();
+          this.scrollLeft += delta;
+        }
+      }, { passive: false });
+    }
   }
   function escHtml(s){ return String(s).replace(/[&<>"]/g, function(m){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
 
@@ -422,7 +481,8 @@ ${body}
           mn.classList.toggle('ft', isFt);
         }
         // Rebuild teams only when the score changed (winner highlight flips).
-        if (tm && tm.dataset.s !== m.score) {
+        var scoreChanged = tm && tm.dataset.s !== m.score;
+        if (scoreChanged) {
           tm.dataset.s = m.score;
           if (settings.highlightRow && highlightedScore !== m.score) {
             li.classList.add('flash');
@@ -430,7 +490,14 @@ ${body}
             setTimeout(function(){ li.classList.remove('flash'); highlightedScore = null; }, 400);
           }
           tm.innerHTML = teamsHtml(m);
-          // Refresh an open timeline in place (it stays open; markers update live)
+        }
+        // Refresh an open timeline when the score or the clock moves, so the
+        // trailing "now" marker tracks the match rather than freezing.
+        // Compare on the raw minute (p[1]) rather than the tick-markup label.
+        var rawStatus = String(m.statusLabel).replace(/<[^>]*>/g, '');
+        var clockChanged = li.dataset.status !== rawStatus;
+        li.dataset.status = rawStatus;
+        if (scoreChanged || clockChanged) {
           var slot = li.nextElementSibling;
           if (slot && slot.classList && slot.classList.contains('match-timeline')) {
             fetch('/timeline/' + m.id).then(function(r){ return r.json(); })
@@ -519,44 +586,7 @@ ${body}
     });
   });
 
-  // --- Copy match name button: click the 📋 icon to copy team names to clipboard.
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('.copy-btn');
-    if (!btn) return;
-    e.stopPropagation();
-    var text = btn.getAttribute('data-teams') || '';
-    function showCopied(){
-      btn.classList.add('copied');
-      var orig = btn.textContent;
-      btn.textContent = '✓';
-      setTimeout(function(){
-        btn.classList.remove('copied');
-        btn.textContent = orig;
-      }, 1200);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(showCopied).catch(function(){
-        fallbackCopy(text, btn);
-      });
-    } else {
-      fallbackCopy(text, btn);
-    }
-  });
-  function fallbackCopy(text, btn){
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand('copy');
-      showCopied();
-    } catch(err) {
-      console.error('copy failed', err);
-    }
-    document.body.removeChild(ta);
-  }
+  // Only the chevron arrow opens the timeline; the rest of the row is inert.
 
 })();
 </script></footer>
