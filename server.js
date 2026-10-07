@@ -178,15 +178,12 @@ function renderPage(groups, live, matched, now, time) {
   h1 { font-size:20px; margin:0 0 4px; }
   .topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .topbar h1 { margin:0; }
-  .nav { position:relative; }
-  #nav-btn { background:#171a21; color:#e6e6e6; border:1px solid #242833; border-radius:8px;
-    font-size:17px; line-height:1; padding:7px 11px; cursor:pointer; }
-  #nav-btn:hover { background:#1f232d; }
-  .nav-menu { position:absolute; right:0; top:calc(100% + 6px); min-width:160px; z-index:50;
-    background:#171a21; border:1px solid #242833; border-radius:10px; overflow:hidden;
-    box-shadow:0 8px 24px rgba(0,0,0,.45); }
-  .nav-menu a { display:block; padding:10px 14px; color:#cfd3da; text-decoration:none; font-size:14px; }
-  .nav-menu a:hover, .nav-menu a.active { background:#1f232d; color:#fff; }
+  .nav { display:flex; gap:6px; }
+  .nav a { display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; background:#171a21; border:1px solid #242833;
+    border-radius:8px; font-size:16px; line-height:1; text-decoration:none; }
+  .nav a:hover { background:#1f232d; }
+  .nav a.active { background:#1b1f28; border-color:#9ecbff; }
   .meta { color:#8a8f98; font-size:13px; margin-bottom:20px; display:inline-flex; align-items:center; gap:8px; }
   .live-badge { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#0d2416,#0a1f14); border:1px solid #16a34a; border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; color:#4ade80; letter-spacing:.02em; }
   .live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px rgba(74,222,128,.5); animation:pulse 1.4s ease-in-out infinite; }
@@ -287,6 +284,34 @@ function renderPage(groups, live, matched, now, time) {
   li.match-timeline.focused .mn-now { background:#0c1320; }
 
   li.match-timeline .tl-empty { font-size:12px; color:#8a8f98; padding:4px 0; }
+  /* Card markers on the goal rail — inline with goal minutes */
+  li.match-timeline .card-marker { display:inline-flex; align-items:center; justify-content:center;
+    min-width:22px; min-height:22px; margin-left:4px; font-size:13px; border-radius:50%;
+    background:rgba(255,255,255,0.06); border:1px solid #334155; cursor:default; }
+  li.match-timeline .card-marker.yellow { border-color:#f0b429; color:#f0b429; }
+  li.match-timeline .card-marker.red { border-color:#ff4444; color:#ff4444; }
+  li.match-timeline .card-marker.home { box-shadow:0 0 0 1px #4ade80 inset; }
+  li.match-timeline .card-marker.away { box-shadow:0 0 0 1px #f87171 inset; }
+  /* Scorer names and penalty indicators on the goal rail */
+  li.match-timeline .scorer { font-size:11px; color:#94a3b8; margin-left:4px; font-weight:500; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle; }
+  li.match-timeline .pen { font-size:10px; margin-left:2px; vertical-align:middle; opacity:0.8; }
+  /* Step-line area chart: total goals over time. The viewBox is built in
+     real pixel units (host width measured at render), so the drawing
+     fills the card 1:1 — no scaling, circles stay round. */
+  li.match-timeline .chart-host { margin-top:6px; padding-bottom:18px; position:relative; }
+  li.match-timeline .score-chart { display:block; width:100%; height:76px; }
+  li.match-timeline .score-ticks { position:relative; left:0; right:0; text-align:center; }
+  li.match-timeline .score-tick { position:absolute; font:9px/13px system-ui,-apple-system,sans-serif;
+    color:#8a8f98; text-align:right; padding-right:6px; white-space:nowrap; }
+  li.match-timeline .score-tick::before { content:""; position:absolute; left:-2px; right:6px; bottom:-2px; border-top:1px solid #242833; }
+  .score-chart .sc-grid line { stroke:#242833; stroke-width:1; vector-effect:non-scaling-stroke; }
+  .score-chart .sc-base { stroke:#334155; stroke-width:1; vector-effect:non-scaling-stroke; }
+  .score-chart .sc-area { fill:rgba(240,180,41,.14); stroke:none; }
+  .score-chart .sc-line { fill:none; stroke:#f0b429; stroke-width:1.5;
+    stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .score-chart .sc-goal { fill:#f0b429; pointer-events:none; }
+  .score-chart .sc-now { fill:#4ade80; animation:sc-pulse 1s ease-in-out infinite; }
+  @keyframes sc-pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
   .loading {
     text-align:center;
     color:#8a8f98;
@@ -317,36 +342,12 @@ function renderPage(groups, live, matched, now, time) {
 </head>
 <body>
 <div class="topbar"><h1>Live Scores</h1>
-<div class="nav"><button id="nav-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
-<div id="nav-menu" class="nav-menu" hidden><a href="/">Live scores</a><a href="/config">Config</a></div></div></div>
+<div class="nav"><a href="/" class="active" title="Live scores" aria-label="Live scores">⚽</a><a href="/config" title="Config" aria-label="Config">⚙️</a></div></div>
 <p class="meta" id="meta-line"><span class="live-badge"><span class="live-dot"></span><span class="badge-text">LIVE &middot; <span id="last-update">live</span></span></span><span class="meta-separator">&middot;</span><span class="info"><span id="match-count">${live}</span> matches &middot; <span id="league-count">${groups.size}</span> leagues</span></p>
 ${body}
 <footer>Source: aiscore.mobi &middot; matched ${matched}/${live} leagues &middot; localhost:${PORT}<script>
 (function(){
-  // Top-right dropdown: toggles the nav menu, closes on outside click or Escape.
-  var navBtn = document.getElementById('nav-btn');
-  var navMenu = document.getElementById('nav-menu');
-  if (navBtn && navMenu) {
-    navBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      var open = navMenu.hasAttribute('hidden');
-      if (open) { navMenu.removeAttribute('hidden'); navBtn.setAttribute('aria-expanded', 'true'); }
-      else { navMenu.setAttribute('hidden', ''); navBtn.setAttribute('aria-expanded', 'false'); }
-    });
-    document.addEventListener('click', function(e){
-      if (!navMenu.hasAttribute('hidden') && !navMenu.contains(e.target)) {
-        navMenu.setAttribute('hidden', '');
-        navBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && !navMenu.hasAttribute('hidden')) {
-        navMenu.setAttribute('hidden', '');
-        navBtn.setAttribute('aria-expanded', 'false');
-        navBtn.focus();
-      }
-    });
-  }
+  // Topbar icons are plain links; no dropdown to manage.
   function closeOthers(except){
     document.querySelectorAll('li.match-timeline').forEach(function(tl){
       if (tl !== except && tl.parentNode) tl.parentNode.removeChild(tl);
@@ -394,8 +395,79 @@ ${body}
   });
   }
   document.querySelectorAll('.match-item').forEach(bindItem);
+  /**
+   * Simple step-line area chart: total goals over time.
+   *
+   * Score changes are instantaneous, so the line steps up at each goal
+   * minute and stays flat until now (the flat tail mirrors the held pill).
+   * Coordinates are real pixels (width measured from the host element)
+   * so the drawing fills the card exactly — no viewBox scaling, no
+   * aspect-ratio distortion. No axis labels: the goal minutes are
+   * already on the rail directly above.
+   */
+  function chartSvg(goals, minute, lastGoal, pxWidth, cards){
+    var H = 76, PAD = 4;
+    var W = Math.max(1, Math.round(pxWidth) || 320);
+    var xEnd = Math.max(minute || 0, lastGoal || 0, 1);
+    var yMax = Math.max(goals.length, 1);
+    function X(m){ return (PAD + (m / xEnd) * (W - 2 * PAD)).toFixed(1); }      // drawing coords: 0..xEnd (always fits card)
+    function XT(m){ return (PAD + (m / 90) * (W - 2 * PAD - 28)).toFixed(1); }  // time ticks: 0..90 (always fits card, right reserve)
+    function Y(c){ return (H - PAD - (c / yMax) * (H - 2 * PAD)).toFixed(1); }
+    // Step-after path: flat until the goal minute, then jump +1.
+    var d = 'M' + X(0) + ',' + Y(0);
+    var dots = '';
+    goals.forEach(function(g, i){
+      d += ' L' + X(g.minute) + ',' + Y(i) + ' L' + X(g.minute) + ',' + Y(i + 1);
+      // Football emoji at each goal step (text anchored at bottom-center of the step)
+      dots += '<text x="' + X(g.minute) + '" y="' + (parseFloat(Y(i + 1)) + 5) + '" text-anchor="middle" dominant-baseline="central" font-size="12" class="sc-goal">⚽</text>';
+    });
+    d += ' L' + X(xEnd) + ',' + Y(goals.length);
+    var area = d + ' L' + X(xEnd) + ',' + Y(0) + ' L' + X(0) + ',' + Y(0) + ' Z';
+    // Live "now" dot — blinking marker at current minute & goal count.
+    var liveDot = '';
+    if (minute && minute > 0) {
+      liveDot = '<circle class="sc-now" cx="' + X(minute) + '" cy="' + Y(goals.length) + '" r="4"/>';
+    }
+    // Card markers on the time axis (above chart)
+    var cardSvg = '';
+    if (cards && cards.length) {
+      cards.forEach(function(c){
+        var cx = XT(c.minute);
+        var cy = PAD + 6;  // just above the chart
+        var fill = c.type === 'yellow' ? '#f0b429' : '#ff4444';
+        var stroke = c.team === 'home' ? '#4ade80' : '#f87171';  // green for home, red for away
+        cardSvg += '<circle class="sc-card" cx="' + cx + '" cy="' + cy + '" r="4" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5" />';
+        // Small team indicator dot
+        cardSvg += '<circle class="sc-card-team" cx="' + cx + '" cy="' + (cy + 7) + '" r="2" fill="' + stroke + '" />';
+      });
+    }
+    var grid = '';
+    var ticks = [];
+    for (var t = 0; t <= 90; t += 15) {
+      ticks.push({ m: t, label: t + "'" });
+    }
+    var ticksHtml = '';
+    for (var i = 0; i < ticks.length; i++) {
+      var t = ticks[i].m, lab = ticks[i].label;
+      if (i > 0 && t === ticks[i - 1].m) continue;
+      var x = XT(t);
+      ticksHtml += '<span class="score-tick" style="left:' + x + 'px">' + lab + '</span>';
+    }
+    return '<svg class="score-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Total goals over time">' +
+      '<g class="sc-grid">' + grid + '</g>' +
+      '<line class="sc-base" x1="' + PAD + '" y1="' + Y(0) + '" x2="' + (W - PAD) + '" y2="' + Y(0) + '"/>' +
+      '<path class="sc-area" d="' + area + '"/>' +
+      '<path class="sc-line" d="' + d + '"/>' +
+      '<g class="sc-dot">' + dots + '</g>' +
+      cardSvg +
+      liveDot +
+      '</svg>' +
+      '<div class="score-ticks">' + ticksHtml + '</div>';
+  }
+
   function renderInto(d, slot, owner){
     var goals = d.goals || [];
+    var cards = d.cards || [];
     if (!slot.isConnected) return;
     if (goals.length === 0) {
       var held = d.held !== null ? ' held ' + d.held + 'm' : '';
@@ -407,10 +479,18 @@ ${body}
       return;
     }
     var parts = goals.map(function(g, i){
-      var prev = i > 0 ? goals[i-1] : 0;
-      var gap = g - prev;
+      var prev = i > 0 ? goals[i-1].minute : 0;
+      var gap = g.minute - prev;
       var label = i === 0 ? 'kickoff' : (gap === 0 ? 'same' : gap + 'm');
-      return '<span class="mg">' + g + '′<i>' + label + '</i></span>';
+      var scorerHtml = g.scorer ? '<span class="scorer">' + escHtml(g.scorer) + '</span>' : '';
+      var penHtml = g.isPenalty ? '<span class="pen" title="Penalty">🅿</span>' : '';
+      return '<span class="mg">' + g.minute + '′<i>' + label + '</i></span>' + scorerHtml + penHtml;
+    }).join('');
+    // Add card markers to the goal rail
+    var cardMarkers = cards.map(function(c){
+      var cls = 'card-marker ' + c.type + (c.team === 'home' ? ' home' : ' away');
+      var label = c.type === 'yellow' ? '🟨' : '🟥';
+      return '<span class="' + cls + '" title="' + (c.team === 'home' ? 'Home' : 'Away') + ' ' + c.type + ' card">' + label + '</span>';
     }).join('');
     // Final label after the last goal: minutes since that goal. The
     // current match time is deliberately omitted — the match card already
@@ -419,9 +499,13 @@ ${body}
     var heldLabel = (d.held === null || d.held === undefined) ? '' : escHtml(d.held + 'm');
     slot.innerHTML =
       '<div class="goalrow">' +
-      '<div class="goalrow-inner">' + parts +
+      '<div class="goalrow-inner">' + parts + cardMarkers +
       (heldLabel ? '<span class="mn-now">' + heldLabel + '</span>' : '') +
-      '</div></div>';
+      '</div></div>' +
+      '<div class="chart-host"></div>';
+    // Measure the host so the chart's viewBox matches real pixels exactly.
+    var host = slot.querySelector('.chart-host');
+    if (host) host.innerHTML = chartSvg(goals, d.minute, d.lastGoal, host.clientWidth, cards);
     // Mouse wheels scroll vertically; translate that to horizontal so
     // desktop users can reach markers past the edge (touch just works).
     var row = slot.querySelector('.goalrow');
@@ -653,36 +737,93 @@ async function fetchGoalMinutes(path) {
   if (cut > 0) html = html.slice(0, cut);
 
   const GOAL_ICONS = ['match-events/goal.png', 'match-events/phan-luoi.png'];
-  const isGoal = (cell) =>
-    cell && GOAL_ICONS.some((i) => cell[1].includes(i));
+  const YELLOW_ICONS = ['match-events/yellow.png', 'match-events/yellow-card.png', 'match-events/yc.png'];
+  const RED_ICONS = ['match-events/red.png', 'match-events/red-card.png', 'match-events/rc.png'];
 
-  const goals = [];
+  const hasIcon = (cell, icons) =>
+    cell && icons.some((i) => cell[1].includes(i));
+
+  // Extract scorer name from cell HTML (text near the goal icon)
+  const extractScorer = (cell) => {
+    if (!cell) return null;
+    const html = cell[1];
+    // The player name is typically in a specific span or after the icon
+    // Try to find a player name pattern - usually capitalized name after the icon
+    // Remove icon images first
+    const withoutIcons = html.replace(/<img[^>]*>/g, '');
+    // Look for text content in common player name containers
+    const nameMatch = withoutIcons.match(/class="[^"]*player[^"]*"[^>]*>([^<]+)</i) ||
+                      withoutIcons.match(/class="[^"]*name[^"]*"[^>]*>([^<]+)</i) ||
+                      withoutIcons.match(/<span[^>]*>([A-Z][a-z]+(?:\s+[A-Z]\.?)?)</i);
+    if (nameMatch) return nameMatch[1].trim();
+    // Fallback: get first reasonable text chunk that looks like a name
+    const text = withoutIcons
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&#\d+;/g, '')
+      .replace(/\d+\s*-\s*\d+/g, '')  // remove score patterns
+      .replace(/[<>]/g, '')           // remove any remaining brackets
+      .trim();
+    // Filter out obvious non-names (too long, contains score-like patterns, HTML artifacts)
+    if (text.length > 3 && text.length < 30 && 
+        !/^\d/.test(text) && 
+        !/[-–]/.test(text) &&
+        !/^\s*</.test(text) &&
+        !/class\s*=/.test(text) &&
+        !/div\s*"/.test(text)) {
+      return text;
+    }
+    return null;
+  };
+
+  const goals = []; // { minute, team: 'home'|'away', scorer: string|null, isPenalty: boolean }
+  const cards = []; // { minute, team: 'home'|'away', type: 'yellow'|'red' }
   for (const row of html.split('<div class="tr">').slice(1)) {
     const mm = /minute-event[^>]*>\s*(\d{1,3})/.exec(row);
     if (!mm) continue;
+    const minute = Number(mm[1]);
     const home = /class="td home-event"[^>]*>([\s\S]*?)(?=<div class="td )/
       .exec(row);
     const away = /class="td away-event"[^>]*>([\s\S]*?)$/.exec(row);
-    if (isGoal(home) || isGoal(away)) goals.push(Number(mm[1]));
+
+    // Goals - check home team
+    if (hasIcon(home, GOAL_ICONS)) {
+      const isPenalty = home && home[1].includes('phan-luoi.png');
+      goals.push({ minute, team: 'home', scorer: extractScorer(home), isPenalty });
+    }
+    // Goals - check away team
+    if (hasIcon(away, GOAL_ICONS)) {
+      const isPenalty = away && away[1].includes('phan-luoi.png');
+      goals.push({ minute, team: 'away', scorer: extractScorer(away), isPenalty });
+    }
+    // Yellow cards
+    if (hasIcon(home, YELLOW_ICONS)) cards.push({ minute, team: 'home', type: 'yellow' });
+    if (hasIcon(away, YELLOW_ICONS)) cards.push({ minute, team: 'away', type: 'yellow' });
+    // Red cards
+    if (hasIcon(home, RED_ICONS)) cards.push({ minute, team: 'home', type: 'red' });
+    if (hasIcon(away, RED_ICONS)) cards.push({ minute, team: 'away', type: 'red' });
   }
   // Keep every scoring event: both teams can score in the same minute
   // (or 45+1 / 45+2 read as 45), so deduplicating minutes hides a goal -
   // a 3-1 would render only 3 markers.
-  return goals.slice().sort((a, b) => a - b);
+  return { 
+    goals: goals.slice().sort((a, b) => a.minute - b.minute), 
+    cards: cards.slice().sort((a, b) => a.minute - b.minute) 
+  };
 }
 
 
 async function goalMinutesFor(id, path) {
   const hit = goalCache.get(id);
-  if (hit && Date.now() - hit.at < GOAL_TTL_MS) return hit.goals;
-  let goals = null;
+  if (hit && Date.now() - hit.at < GOAL_TTL_MS) return hit.data;
+  let data = null;
   try {
-    goals = await fetchGoalMinutes(path);
+    data = await fetchGoalMinutes(path);
   } catch (e) {
-    goals = null;               // page missing or upstream error
+    data = { goals: [], cards: [] };  // page missing or upstream error
   }
-  goalCache.set(id, { goals, at: Date.now() });
-  return goals;
+  goalCache.set(id, { data, at: Date.now() });
+  return data;
 }
 
 /**
@@ -741,7 +882,7 @@ function renderConfig() {
     cfgRow('Badge', 'LIVE · updated HH:MM:SS, pulse on refresh'),
     cfgRow('Minute tick', 'only the ’ blinks — number stays solid; HT/FT plain grey'),
     cfgRow('Timeline', 'tap a match → /timeline/:id goal rail + spinner while loading'),
-    cfgRow('Nav', '☰ top-right → Live scores / Config'),
+    cfgRow('Nav', '⚽ live scores · ⚙️ config (top-right icons)'),
   ].join('');
   const rowsRoutes = [
     cfgRow('/', 'Live homepage (HTML)'),
@@ -814,15 +955,12 @@ function renderConfig() {
     font:15px/1.5 system-ui,-apple-system,sans-serif; }
   .topbar { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .topbar h1 { font-size:20px; margin:0; }
-  .nav { position:relative; }
-  #nav-btn { background:#171a21; color:#e6e6e6; border:1px solid #242833; border-radius:8px;
-    font-size:17px; line-height:1; padding:7px 11px; cursor:pointer; }
-  #nav-btn:hover { background:#1f232d; }
-  .nav-menu { position:absolute; right:0; top:calc(100% + 6px); min-width:160px; z-index:50;
-    background:#171a21; border:1px solid #242833; border-radius:10px; overflow:hidden;
-    box-shadow:0 8px 24px rgba(0,0,0,.45); }
-  .nav-menu a { display:block; padding:10px 14px; color:#cfd3da; text-decoration:none; font-size:14px; }
-  .nav-menu a:hover, .nav-menu a.active { background:#1f232d; color:#fff; }
+  .nav { display:flex; gap:6px; }
+  .nav a { display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; background:#171a21; border:1px solid #242833;
+    border-radius:8px; font-size:16px; line-height:1; text-decoration:none; }
+  .nav a:hover { background:#1f232d; }
+  .nav a.active { background:#1b1f28; border-color:#9ecbff; }
   .cfg { background:#171a21; border:1px solid #242833; border-radius:10px; margin:12px 0; overflow:hidden; }
   .cfg h2 { font-size:13px; font-weight:600; color:#9ecbff; padding:10px 14px; margin:0;
     background:#1b1f28; border-bottom:1px solid #242833; }
@@ -841,8 +979,7 @@ function renderConfig() {
 </head>
 <body>
 <div class="topbar"><h1>Config</h1>
-<div class="nav"><button id="nav-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu">☰</button>
-<div id="nav-menu" class="nav-menu" hidden><a href="/">Live scores</a><a href="/config" class="active">Config</a></div></div></div>
+<div class="nav"><a href="/" title="Live scores" aria-label="Live scores">⚽</a><a href="/config" class="active" title="Config" aria-label="Config">⚙️</a></div></div>
 <section class="cfg"><h2>Server</h2><table>${rowsServer}</table></section>
 <section class="cfg"><h2>Data source &amp; caching</h2><table>${rowsData}</table></section>
 <section class="cfg"><h2>Live UI behaviour</h2><table>${rowsUi}</table></section>
@@ -852,29 +989,6 @@ function renderConfig() {
 <footer>Source: aiscore.mobi &middot; localhost:${PORT}</footer>
 <script>
 (function(){
-  var navBtn = document.getElementById('nav-btn');
-  var navMenu = document.getElementById('nav-menu');
-  if (navBtn && navMenu) {
-    navBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      var open = navMenu.hasAttribute('hidden');
-      if (open) { navMenu.removeAttribute('hidden'); navBtn.setAttribute('aria-expanded', 'true'); }
-      else { navMenu.setAttribute('hidden', ''); navBtn.setAttribute('aria-expanded', 'false'); }
-    });
-    document.addEventListener('click', function(e){
-      if (!navMenu.hasAttribute('hidden') && !navMenu.contains(e.target)) {
-        navMenu.setAttribute('hidden', '');
-        navBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && !navMenu.hasAttribute('hidden')) {
-        navMenu.setAttribute('hidden', '');
-        navBtn.setAttribute('aria-expanded', 'false');
-        navBtn.focus();
-      }
-    });
-  }
   // Config dropdowns: save changes live and notify other tabs.
   var bc = new BroadcastChannel('live-scores-settings');
   var statusEl = document.getElementById('save-status');
@@ -1002,16 +1116,27 @@ async function handle(req, res) {
         return res.end(JSON.stringify({ error: 'match not found' }));
       }
       const goalPath = urls.get(id);
-      let goals = null;
-      if (goalPath) goals = await goalMinutesFor(id, goalPath);
+      let goalData = { goals: [], cards: [] };
+      if (goalPath) goalData = await goalMinutesFor(id, goalPath);
+      let goals = goalData.goals || [];
+      const cards = goalData.cards || [];
       // Safety net: never show more markers than the score has goals (a
       // duplicated event table would double-count). Same-minute goals stay.
       const total = Number(row[2]) + Number(row[3]);
-      if (Array.isArray(goals) && goals.length > total) goals = [...new Set(goals)];
+      if (goals.length > total) {
+        // Deduplicate by minute+team+scorer to keep distinct events
+        const seen = new Set();
+        goals = goals.filter(g => {
+          const key = g.minute + '|' + g.team + '|' + (g.scorer || '');
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
       const minute = toMinute(row[1]);
       let lastGoal = null, held = null;
-      if (Array.isArray(goals) && goals.length) {
-        lastGoal = goals[goals.length - 1];
+      if (goals.length) {
+        lastGoal = goals[goals.length - 1].minute;
         if (minute !== null) held = Math.max(0, minute - lastGoal);
       } else if (minute !== null) {
         held = minute;
@@ -1023,7 +1148,7 @@ async function handle(req, res) {
         score: row[2] + '-' + row[3],
         home: esc(row[30]), away: esc(row[31]),
         league: esc(leagues.get(matchToLeague.get(id))),
-        goals: goals || [], lastGoal, held, minute,
+        goals, cards, lastGoal, held, minute,
       }));
     }
 
